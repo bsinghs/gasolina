@@ -1,6 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { AUTH_MODE, useAuth } from "../auth/AuthProvider";
 
+// People created by `make demo` (services/api/scripts/seed_demo.py)
+const DEMO_PEOPLE = [
+  { label: "Owner", email: "owner@example.com" },
+  { label: "Employee · Route 9", email: "employee1@example.com" },
+  { label: "Employee · Main Street", email: "employee2@example.com" },
+];
+
 export function SignInPage() {
   const { signInWithGoogle, sendEmailLink, devSignIn } = useAuth();
   const [email, setEmail] = useState("");
@@ -44,6 +51,16 @@ export function SignInPage() {
 
         {sent && <p>Check your inbox for a sign-in link.</p>}
         {error && <p style={{ color: "#f3b3ad" }}>{error}</p>}
+        {AUTH_MODE === "dev" && (
+          <div className="stack" style={{ gap: 8, marginTop: 8 }}>
+            <p style={{ fontSize: 12, color: "#9fb2b7" }}>Demo mode: pick who you want to be</p>
+            {DEMO_PEOPLE.map((p) => (
+              <button key={p.email} className="btn btn-ghost" style={{ justifyContent: "space-between" }} onClick={() => devSignIn(p.email)}>
+                <span>{p.label}</span><span style={{ fontWeight: 400, fontSize: 12, color: "#4b5d63" }}>{p.email}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <p style={{ fontSize: 12, color: "#9fb2b7", textAlign: "center" }}>Only people your manager has added can sign in.</p>
       </div>
     </main>

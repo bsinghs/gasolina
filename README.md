@@ -24,6 +24,10 @@ gasolina/
 
 ## Run it on your computer
 
+Quickest: `make demo` (everything local, sign in by picking Owner or Employee) or `make live` (real online API + Google sign-in). Run `make` to see all commands.
+
+Manual steps, if you'd rather:
+
 You need Python 3.11+, Node 20+, and Docker (or any Postgres 15+).
 
 ```bash
