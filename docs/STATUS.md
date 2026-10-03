@@ -16,7 +16,8 @@ _Last updated: Oct 3, 2026_
 
 Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 
-- [ ] Supabase project: copy Project URL, anon key, Session pooler connection string
+- [x] Supabase project created, tables in place (Oct 3)
+- [ ] Supabase: reset the database password, copy the Session pooler connection string
 - [ ] Google Cloud OAuth client → paste into Supabase (Authentication → Providers → Google)
 - [ ] Render: New → Blueprint → this repo; fill `DATABASE_URL`, `SUPABASE_URL`, `BOOTSTRAP_OWNER_EMAIL`
 - [ ] Cloudflare Pages: root `apps/web`, build `npm run build`, output `dist`; fill the `VITE_*` variables

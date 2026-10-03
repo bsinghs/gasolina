@@ -4,6 +4,7 @@ services:
     name: gasolina-api
     runtime: docker
     plan: free
+    region: virginia   # same area as the Supabase database (us-east-1)
     dockerfilePath: ./services/api/Dockerfile
     dockerContext: .
     healthCheckPath: /api/health

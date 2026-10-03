@@ -39,9 +39,14 @@ def _jwks_client() -> jwt.PyJWKClient:
 
 
 def _email_from_token(token: str) -> tuple[str, str | None]:
+    """New Supabase projects sign tokens with a key pair (checked against the project's public keys).
+    Older projects use a shared secret (HS256), which needs SUPABASE_JWT_SECRET."""
     settings = get_settings()
     try:
-        if settings.supabase_jwt_secret:
+        alg = jwt.get_unverified_header(token).get("alg")
+        if alg == "HS256":
+            if not settings.supabase_jwt_secret:
+                raise jwt.InvalidTokenError("HS256 token but SUPABASE_JWT_SECRET is not set")
             claims = jwt.decode(token, settings.supabase_jwt_secret, algorithms=["HS256"], audience="authenticated")
         else:
             key = _jwks_client().get_signing_key_from_jwt(token).key

@@ -6,9 +6,15 @@ Keep a note open as you go. You'll copy several values from one site to another.
 
 ## 1. Supabase: database and sign-in
 
-1. Create a project at supabase.com. Save the database password.
-2. **Project Settings → Data API (or API)**: copy the **Project URL** and the **anon / publishable key**.
-3. **Connect** button (top of the dashboard) → copy the **Session pooler** connection string. Put your password in it. This is `DATABASE_URL`.
+**Done (Oct 3):** project `gasolina` (ref `uhwhfrwpuysestjdqawz`, region us-east-1). Migrations 001 and 002 are applied, so all tables exist and are closed to Supabase's public Data API.
+
+- Project URL: `https://uhwhfrwpuysestjdqawz.supabase.co`
+- Publishable key: Supabase dashboard → Project Settings → API Keys (`sb_publishable_...`)
+
+Still needed: the **database password**. Supabase generated one you haven't seen.
+
+1. Dashboard → **Project Settings → Database → Reset database password** → generate → save it somewhere safe.
+2. **Connect** button (top of the dashboard) → copy the **Session pooler** connection string and put the password in it. This is `DATABASE_URL`.
    - Use the pooler, not the direct connection: hosting providers often can't reach the direct one.
 
 ## 2. Google sign-in
