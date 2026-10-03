@@ -1,4 +1,4 @@
-# Local development database.  docker compose up -d db
+# Local demo: database + API in Docker.   `make demo` uses this; `docker compose up -d db` for the database only.
 services:
   db:
     image: postgres:16
@@ -10,6 +10,28 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./database/create-test-db.sql:/docker-entrypoint-initdb.d/create-test-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Same image Render runs (Python 3.12), so the laptop's own Python version doesn't matter.
+  api:
+    build:
+      context: .
+      dockerfile: services/api/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/gasolina
+      AUTH_MODE: dev
+      BOOTSTRAP_OWNER_EMAIL: owner@example.com
+      BOOTSTRAP_OWNER_NAME: Owner
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

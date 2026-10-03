@@ -19,16 +19,16 @@ gasolina/
 │   ├── ARCHITECTURE.md How the pieces fit (with diagrams) and how to add a feature
 │   ├── DEPLOY.md       Step-by-step: Supabase, Google sign-in, hosting
 │   └── diagrams/       Diagram sources (.mmd) and images (.png)
-└── docker-compose.yml  Local Postgres for development
+└── docker-compose.yml  Local Postgres + API for `make demo`
 ```
 
 ## Run it on your computer
 
-Quickest: `make demo` (everything local, sign in by picking Owner or Employee) or `make live` (real online API + Google sign-in). Run `make` to see all commands.
+Quickest: `make demo` (everything local, sign in by picking Owner or Employee) or `make live` (real online API + Google sign-in). Run `make` to see all commands. `make demo` runs the database and API in Docker, so it only needs Node 20+ and Docker Desktop.
 
 Manual steps, if you'd rather:
 
-You need Python 3.11+, Node 20+, and Docker (or any Postgres 15+).
+You need Python 3.10+ (macOS's built-in 3.9 is too old), Node 20+, and Docker (or any Postgres 15+).
 
 ```bash
 # 1. Database

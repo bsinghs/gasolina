@@ -1,0 +1,8 @@
+# Keep laptop-only folders out of Docker builds
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+apps/web/dist
+Temp_DOCS
+.git
