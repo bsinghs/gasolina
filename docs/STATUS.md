@@ -17,9 +17,9 @@ _Last updated: Oct 3, 2026_
 Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 
 - [x] Supabase project created, tables in place (Oct 3)
-- [ ] Supabase: reset the database password, copy the Session pooler connection string
-- [ ] Google Cloud OAuth client → paste into Supabase (Authentication → Providers → Google)
-- [ ] Render: New → Blueprint → this repo; fill `DATABASE_URL`, `SUPABASE_URL`, `BOOTSTRAP_OWNER_EMAIL`
+- [x] Supabase: database password reset, Session pooler connection string saved
+- [x] Google sign-in: Google Cloud project `gasolina-510519`, OAuth client, enabled in Supabase (Testing mode: test users only)
+- [x] API live on Render: https://gasolina-api-c7yd.onrender.com (`/api/health` OK, connected to Supabase)
 - [ ] Cloudflare Pages: root `apps/web`, build `npm run build`, output `dist`; fill the `VITE_*` variables
 - [ ] Connect the ends: `CORS_ORIGINS` on Render, Site URL in Supabase
 - [ ] Sign in as owner, add stores and people, run one day through on a phone
