@@ -7,3 +7,6 @@ __pycache__/
 .env.local
 .pytest_cache/
 .DS_Store
+
+# Personal notes and secrets: never commit
+Temp_DOCS/
