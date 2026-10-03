@@ -1,0 +1,25 @@
+flowchart LR
+    GH["<b>GitHub</b><br/><small>bsinghs/gasolina</small>"]
+
+    subgraph CF["Cloudflare Pages · free"]
+        WEB["<b>apps/web</b><br/><small>static site<br/>gasolina.pages.dev</small>"]
+    end
+    subgraph RD["Render · free (or $7/mo always-on)"]
+        API["<b>services/api</b><br/><small>Docker · runs migrations on start<br/>gasolina-api.onrender.com</small>"]
+    end
+    subgraph SB["Supabase · free (or $25/mo Pro)"]
+        AUTH["<b>Auth</b>"]
+        DB[("<b>Postgres</b>")]
+    end
+    GOO["<b>Google Cloud</b><br/><small>OAuth client for<br/>'Continue with Google'</small>"]
+
+    GH -- "push → auto deploy" --> WEB
+    GH -- "push → auto deploy" --> API
+    WEB -- "HTTPS /api" --> API
+    API -- "session pooler" --> DB
+    AUTH -- "Google sign-in" --> GOO
+
+    classDef core fill:#FFF4E0,stroke:#E7A63C,stroke-width:2px,color:#10242B
+    classDef ext fill:#FFFFFF,stroke:#8FA3A8,color:#10242B
+    class API core
+    class WEB,AUTH,DB,GOO,GH ext

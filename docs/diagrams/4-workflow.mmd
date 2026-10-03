@@ -1,0 +1,24 @@
+flowchart LR
+    START(("start")) --> D["<b>draft</b><br/><small>employee typing<br/>autosaves</small>"]
+    D -- "employee submits" --> S["<b>submitted</b><br/><small>locked for employee<br/>owner can edit</small>"]
+    S -- "owner approves" --> A["<b>approved</b><br/><small>ready for the books</small>"]
+    A -- "owner exports CSV" --> E["<b>exported</b><br/><small>in QuickBooks</small>"]
+
+    S -- "owner sends back<br/>with a note" --> R["<b>returned</b><br/><small>employee sees the note</small>"]
+    R -- "employee fixes<br/>and resubmits" --> S
+
+    A -. "owner reopens" .-> S
+    E -. "owner reopens" .-> S
+
+    classDef draft fill:#FFFFFF,stroke:#8FA3A8,color:#10242B
+    classDef waiting fill:#E8EEF7,stroke:#1F4E8C,color:#10242B
+    classDef bad fill:#FBEAE8,stroke:#A3352E,color:#10242B
+    classDef good fill:#E7F3EC,stroke:#246140,color:#10242B
+    classDef done fill:#10242B,stroke:#10242B,color:#FFFFFF
+    classDef dot fill:#10242B,stroke:#10242B,color:#FFFFFF
+    class D draft
+    class S waiting
+    class R bad
+    class A good
+    class E done
+    class START dot

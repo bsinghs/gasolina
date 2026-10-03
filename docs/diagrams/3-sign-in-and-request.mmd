@@ -1,0 +1,27 @@
+sequenceDiagram
+    autonumber
+    participant U as Employee
+    participant W as Web app
+    participant A as Supabase Auth
+    participant API as API
+    participant DB as Postgres
+
+    U->>W: Continue with Google
+    W->>A: sign in
+    A-->>W: signed token (has email)
+    W->>API: GET /api/me  +  token
+    API->>A: fetch public key (cached)
+    API->>API: verify token signature
+    API->>DB: is this email on the invite list?
+    alt not invited or deactivated
+        API-->>W: 403 not_invited
+        W-->>U: "Ask your manager to add you"
+    else invited
+        DB-->>API: person, role, stores
+        API-->>W: me + my stores
+        U->>W: types the worksheet
+        W->>API: PUT /api/reports (autosave)
+        API->>API: check store access, recalculate totals
+        API->>DB: save worksheet + audit log
+        API-->>W: saved report with totals
+    end

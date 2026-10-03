@@ -1,23 +1,46 @@
 # Architecture
 
-```
- Phone / laptop browser
-        │
-        ▼
- apps/web  (React, static files)          Supabase Auth (Google sign-in, email link)
-        │   every call: /api/...  + sign-in token   ▲
-        ▼                                            │ public keys to verify tokens
- services/api  (FastAPI) ─────────────────────────────┘
-        │
-        ▼
- Postgres (Supabase in production, Docker locally)
-```
+## The big picture
+
+![System architecture](diagrams/1-architecture.png)
 
 **Rules that keep it simple**
 
 1. **The browser only talks to the API.** It never reads or writes the database directly. Supabase is used for sign-in only; the API checks the sign-in token on every request.
 2. **All business rules live in the API**: who can see which store, the status workflow, and the worksheet math. The web app shows a live preview of the totals, but the API recalculates on every save and its numbers are the ones stored.
-3. **One folder per feature** in the API. Each feature module looks the same:
+3. **One folder per feature** in the API, and every feature folder looks the same (below).
+
+## Where it runs
+
+![Deployment](diagrams/2-deployment.png)
+
+Every push to `main` on GitHub redeploys both the web app and the API. The API applies any new database migrations when it starts. Step-by-step setup is in [DEPLOY.md](DEPLOY.md).
+
+## What happens when someone signs in and saves
+
+![Sign-in and request flow](diagrams/3-sign-in-and-request.png)
+
+Nobody gets in unless their email is on the **People** list. The API checks store access on every call, so an employee can't read or write another store's worksheets even by editing requests by hand.
+
+## Worksheet status workflow
+
+![Status workflow](diagrams/4-workflow.png)
+
+Every step is written to `audit_log` with who did it and when, and shows as History on the owner's day screen.
+
+| Role | Can do |
+| --- | --- |
+| employee | Fill and submit worksheets for their assigned stores; edit while draft or sent back |
+| manager | Same as employee, for all their stores (room to grow into first-pass review) |
+| owner | Everything: review, approve, send back, reopen, export, people, stores, settings |
+
+## Data model
+
+![Data model](diagrams/5-data-model.png)
+
+The full schema, with every column, is in [`database/migrations/001_initial_schema.sql`](../database/migrations/001_initial_schema.sql). Money is always `numeric(12,2)`. `report_uploads` and `attachments` already exist for the AI report-scanning step.
+
+## Code layout
 
 ```
 services/api/app/
@@ -43,8 +66,6 @@ services/api/app/
 
 `router.py` = endpoints, `schemas.py` = data shapes, `service.py` = rules. Small modules keep their few SQL queries in the router; when a module grows rules, they move to `service.py`.
 
-The web app mirrors this:
-
 ```
 apps/web/src/
 ├── api/        client.ts (every API call in one place) + types.ts
@@ -54,31 +75,13 @@ apps/web/src/
 └── pages/      one file per screen
 ```
 
-## Roles
-
-| Role | Can do |
-| --- | --- |
-| employee | Fill and submit worksheets for their assigned stores; edit while draft or sent back |
-| manager | Same as employee, for all their stores (room to grow into first-pass review) |
-| owner | Everything: review, approve, send back, reopen, export, people, stores, settings |
-
-## Status workflow
-
-```
-draft ──submit──▶ submitted ──approve──▶ approved ──export──▶ exported
-                   │     ▲                   │                   │
-             send back   resubmit            └──── reopen ◀──────┘
-                   ▼     │
-                  returned
-```
-
-Every step is written to `audit_log` with who and when.
+Interactive API documentation (every endpoint, try it in the browser) is at `http://localhost:8000/docs` when the API is running.
 
 ## Growing into separate services
 
-The modules are already separated by feature and only meet through the database, so any of them can become its own service later without rewriting it. The planned next ones are:
+Modules are separated by feature and only meet through the database, so any of them can become its own service later without rewriting it. The planned next ones (dashed in the diagram):
 
-- **services/ai**: scans a photo of the register report and returns the worksheet fields (fills `report_uploads`).
+- **services/ai**: reads a photo of the register report and returns the worksheet fields (fills `report_uploads`).
 - **services/quickbooks**: posts approved days straight into QuickBooks Online through Intuit's API (fills `qb_txn_id`).
 
 Each will be a small FastAPI app next to `services/api`, with its own Dockerfile, called by the API.
@@ -90,3 +93,14 @@ Each will be a small FastAPI app next to `services/api`, with its own Dockerfile
 3. Plug the router into `app/main.py`.
 4. Add the calls to `apps/web/src/api/client.ts` and a page in `apps/web/src/pages/`.
 5. Add a test in `services/api/tests/`.
+
+## Editing the diagrams
+
+The pictures are generated from the text files in [`diagrams/`](diagrams/) (`*.mmd`, Mermaid syntax). Change the text, then re-render:
+
+```bash
+cd docs/diagrams
+npx -p @mermaid-js/mermaid-cli mmdc -c theme.json -b white -s 2 -i 1-architecture.mmd -o 1-architecture.png
+```
+
+GitHub and VS Code (with the "Markdown Preview Mermaid Support" extension) can also show Mermaid text directly.

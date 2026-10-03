@@ -1,0 +1,58 @@
+erDiagram
+    stores ||--o{ store_members : "has staff"
+    people ||--o{ store_members : "works at"
+    stores ||--o{ daily_reports : "one per day"
+    people ||--o{ daily_reports : "submits / reviews"
+    daily_reports ||--o{ paid_outs : "has lines"
+    daily_reports ||--o{ attachments : "has photos"
+    attachments ||--o| report_uploads : "AI reads"
+    daily_reports ||--o{ audit_log : "history"
+
+    stores {
+        uuid id PK
+        text name
+        text qb_location
+        bool active
+    }
+    people {
+        uuid id PK
+        text email "invite list"
+        text role "employee | manager | owner"
+        bool active
+    }
+    store_members {
+        uuid person_id FK
+        uuid store_id FK
+    }
+    daily_reports {
+        uuid id PK
+        uuid store_id FK
+        date business_date "unique per store"
+        text status
+        numeric fuel_sale_etc "8 entered amounts"
+        numeric totals "5 calculated by API"
+        jsonb field_sources "typed or AI"
+    }
+    paid_outs {
+        uuid id PK
+        text kind "cash | check"
+        text payee
+        numeric amount
+        text gl_account
+    }
+    attachments {
+        uuid id PK
+        text storage_path
+    }
+    report_uploads {
+        uuid id PK
+        text report_type
+        jsonb fields_json
+        jsonb checks_json
+    }
+    audit_log {
+        bigint id PK
+        text action
+        jsonb details
+        timestamptz at
+    }

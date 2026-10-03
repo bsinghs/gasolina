@@ -2,6 +2,10 @@
 
 Employees submit each store's **daily sales worksheet** from their phone. The owner **reviews, approves or sends back**, then **exports approved days to QuickBooks** as journal entries.
 
+![System architecture](docs/diagrams/1-architecture.png)
+
+**Start here:** [where we are and what's next](docs/STATUS.md) · [architecture and diagrams](docs/ARCHITECTURE.md) · [deploy checklist](docs/DEPLOY.md)
+
 ```
 gasolina/
 ├── apps/
@@ -11,8 +15,10 @@ gasolina/
 ├── database/
 │   └── migrations/     Plain SQL that creates and changes the tables
 ├── docs/
-│   ├── ARCHITECTURE.md How the pieces fit and how to add a feature
-│   └── DEPLOY.md       Step-by-step: Supabase, Google sign-in, hosting
+│   ├── STATUS.md       What's done, what's next
+│   ├── ARCHITECTURE.md How the pieces fit (with diagrams) and how to add a feature
+│   ├── DEPLOY.md       Step-by-step: Supabase, Google sign-in, hosting
+│   └── diagrams/       Diagram sources (.mmd) and images (.png)
 └── docker-compose.yml  Local Postgres for development
 ```
 

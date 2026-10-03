@@ -1,0 +1,49 @@
+flowchart TB
+    subgraph People["👤 People"]
+        direction LR
+        EMP["<b>Employee</b><br/><small>phone · closes the shift</small>"]
+        OWN["<b>Owner</b><br/><small>laptop · reviews & exports</small>"]
+    end
+
+    subgraph Front["Web app · apps/web"]
+        WEB["<b>React web app</b><br/><small>screens only · no business rules</small>"]
+    end
+
+    subgraph Back["API · services/api"]
+        API["<b>FastAPI service</b><br/><small>auth check · roles · worksheet math<br/>approval workflow · exports</small>"]
+    end
+
+    subgraph SB["Supabase"]
+        direction LR
+        AUTH["<b>Auth</b><br/><small>Google · email link</small>"]
+        DB[("<b>Postgres</b><br/><small>9 tables</small>")]
+    end
+
+    QB["<b>QuickBooks Online</b><br/><small>journal entries</small>"]
+
+    subgraph Later["Next services (planned)"]
+        direction LR
+        AI["<b>AI service</b><br/><small>read register report photos</small>"]
+        QBS["<b>QuickBooks service</b><br/><small>post entries via Intuit API</small>"]
+    end
+
+    EMP --> WEB
+    OWN --> WEB
+    WEB -- "1 · sign in" --> AUTH
+    WEB == "2 · /api/... + token" ==> API
+    API -. "verify token" .-> AUTH
+    API == "SQL" ==> DB
+    API -- "CSV download → import" --> QB
+    API -.-> AI
+    API -.-> QBS
+    QBS -.-> QB
+
+    classDef core fill:#FFF4E0,stroke:#E7A63C,stroke-width:2px,color:#10242B
+    classDef ext fill:#FFFFFF,stroke:#8FA3A8,color:#10242B
+    classDef later fill:#FFFFFF,stroke:#B4C0C2,stroke-dasharray:5 4,color:#4B5D63
+    classDef person fill:#10242B,stroke:#10242B,color:#FFFFFF
+    class API core
+    class WEB,AUTH,DB,QB ext
+    class AI,QBS later
+    class EMP,OWN person
+    style Later fill:#FFFFFF,stroke:#C9D3D2,stroke-dasharray:5 4
