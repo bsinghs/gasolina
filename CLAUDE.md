@@ -1,0 +1,60 @@
+# CLAUDE.md: how to work in this repo
+
+Read this first in every session. Shift Close: gas-station employees fill the **daily sales worksheet** on their phone, the owner **approves or sends it back**, approved days **export to QuickBooks**.
+
+## Layout
+
+```
+apps/web/              React + Vite + TypeScript screens. Talks ONLY to the API, through src/api/client.ts
+services/api/          Python 3.12 FastAPI. All business rules, auth checks, database access
+  app/core/            config (env vars), db (psycopg pool), auth (Supabase JWT / dev header), errors
+  app/modules/<name>/  one folder per feature: router.py (HTTP), schemas.py (Pydantic), service.py (logic + SQL)
+  scripts/             migrate.py (applies database/migrations), seed_demo.py
+  tests/               pytest
+database/migrations/   numbered plain SQL (001_, 002_ ...). Applied in order on every API start
+deploy/cloudrun/       Google Cloud Run deploy (run deploy.sh in Cloud Shell)
+docs/                  STATUS.md (done/next), ARCHITECTURE.md, DEPLOY.md, features/ (one spec per feature)
+render.yaml            old Render host (being retired)
+Makefile               make demo · make live · make test · make stop · make reset-demo
+```
+
+## Commands
+
+| Do | Command |
+| --- | --- |
+| Run everything locally with sample data (Docker) | `make demo` → http://localhost:5173, sign in by picking Owner/Employee |
+| Screens locally against the real online API | `make live` |
+| API tests | `make test` (needs Python 3.10+). Workflow tests also need `TEST_DATABASE_URL` |
+| Type-check + build the web app | `cd apps/web && npm run build` |
+| Deploy the API | Cloud Shell: `cd ~/gasolina && git pull && bash deploy/cloudrun/deploy.sh` |
+
+## Rules (don't break these)
+
+1. **Screens never touch the database.** Browser → API → Postgres. The web app has no database credentials.
+2. **Money is `Decimal`**, rounded with `reconciliation.money()`. Never `float`. Columns are `numeric(12,2)`.
+3. **The API decides everything**: totals, over/short, who can see/do what. The web app only displays. Worksheet math lives in `services/api/app/modules/reports/reconciliation.py` (pure functions, tested).
+4. **Every permission check happens in the API**, using `current_user` / `owner_only` from `app/core/auth.py`. Employees only see their own stores.
+5. **Database changes = a new migration file** (`database/migrations/00N_name.sql`). Never edit an applied migration. Tables stay locked (RLS on, no policies); see 002.
+6. **No secrets in git.** Secrets live in Google Secret Manager / host env vars. `Temp_DOCS/` is personal and gitignored: never commit it, never copy its contents into tracked files.
+7. **AI fills drafts; people confirm.** Anything an AI reads goes into a draft and is marked in `field_sources` (`typed` / `ai` / `ai_corrected`). Code, not AI, checks the numbers add up.
+8. **Keep it simple.** One module per feature, plain SQL, no ORM, no new framework without a reason written in the feature spec.
+9. Python uses `X | None` types: Python 3.10+ only. `make demo` runs the API in Docker for that reason.
+
+## How we build a feature
+
+1. **Spec first**: `docs/features/<feature>.md` (problem, flow, API, data, checks, acceptance criteria, stories). Agree it before coding.
+2. **Plan**, then build one story at a time, smallest working slice first.
+3. **Tests** for any math, permission or workflow change (`services/api/tests/`).
+4. **Check it**: `make test`, `npm run build`, click through with `make demo` (owner + employee).
+5. **Update `docs/STATUS.md`** (and ARCHITECTURE.md if the shape changed). Commit with a clear message.
+
+## Environment
+
+- API settings (env vars, see `services/api/app/core/config.py`): `DATABASE_URL`, `AUTH_MODE` (`supabase` | `dev`), `SUPABASE_URL`, `BOOTSTRAP_OWNER_EMAIL`, `CORS_ORIGINS`.
+- Web settings: `apps/web/.env.demo`, `.env.live` (`VITE_API_URL`, `VITE_AUTH_MODE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; all public).
+- Hosts: API on Google Cloud Run (`gasolina-510519`, `us-east4`); database + sign-in on Supabase (`uhwhfrwpuysestjdqawz`, us-east-1); screens to Cloudflare Pages (next). Trial budget is **$0/month**: flag anything that costs money.
+- `AUTH_MODE=dev` trusts an `X-Dev-Email` header. **Only** for local demo; never on a public host.
+
+## Current focus
+
+See `docs/STATUS.md`. Next feature: **AI report scan** → `docs/features/ai-report-scan.md`.

@@ -1,6 +1,6 @@
 # Status and next steps
 
-_Last updated: Oct 3, 2026_
+_Last updated: Oct 4, 2026_
 
 ## Done
 
@@ -20,8 +20,9 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - [x] Supabase: database password reset, Session pooler connection string saved
 - [x] Google sign-in: Google Cloud project `gasolina-510519`, OAuth client, enabled in Supabase (Testing mode: test users only)
 - [x] API live on Render: https://gasolina-api-c7yd.onrender.com (`/api/health` OK, connected to Supabase)
+- [ ] Move the API to Google Cloud Run (free, no 50 s wake-up): run `deploy/cloudrun/deploy.sh` in Cloud Shell, point `apps/web/.env.live` at it, then retire Render
 - [ ] Cloudflare Pages: root `apps/web`, build `npm run build`, output `dist`; fill the `VITE_*` variables
-- [ ] Connect the ends: `CORS_ORIGINS` on Render, Site URL in Supabase
+- [ ] Connect the ends: `CORS_ORIGINS` on the API, Site URL + Redirect URLs in Supabase
 - [ ] Sign in as owner, add stores and people, run one day through on a phone
 
 ## Next: before the demo
@@ -33,7 +34,7 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 ## After the demo (in order)
 
 1. **Shift-report photo upload** on the worksheet (tables already exist)
-2. **AI report scanning**: `services/ai` reads the register report photo and prefills the worksheet, with cross-checks
+2. **AI report scanning**: photo of the register report prefills the worksheet, with cross-checks. Spec: [features/ai-report-scan.md](features/ai-report-scan.md) (covers 1 and 2)
 3. **Direct QuickBooks posting**: `services/quickbooks` via Intuit's API instead of CSV
 4. Reminders when a store hasn't submitted; weekly and monthly reports
 
