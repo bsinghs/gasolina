@@ -1,0 +1,8 @@
+# Builds the API image (same Dockerfile Render used) and stores it in Artifact Registry.
+# Run by deploy/cloudrun/deploy.sh, from the repo root.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "services/api/Dockerfile", "-t", "${_IMAGE}", "."]
+images: ["${_IMAGE}"]
+options:
+  logging: CLOUD_LOGGING_ONLY

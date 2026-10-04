@@ -27,7 +27,17 @@ Still needed: the **database password**. Supabase generated one you haven't seen
 5. Back in Supabase: **Authentication → Sign In / Providers → Google**: enable, paste both, save.
 6. Email links work out of the box in Supabase (fine for a handful of users; set up a custom SMTP sender later for more).
 
-## 3. API on Render
+## 3. API on Google Cloud Run (current, free tier)
+
+Open Google Cloud Shell (console.cloud.google.com, the `>_` icon) in project `gasolina-510519` and run:
+
+```bash
+git clone https://github.com/bsinghs/gasolina && cd gasolina && bash deploy/cloudrun/deploy.sh
+```
+
+The script turns on the needed Google services and asks for `DATABASE_URL` (hidden input, saved in Secret Manager). It then builds the image with Cloud Build, deploys to Cloud Run in `us-east4`, adds a 5-minute keep-warm ping (Cloud Scheduler) and a $1 budget alert. To update later: `git pull && bash deploy/cloudrun/deploy.sh`.
+
+## 3b. API on Render (previous option)
 
 1. render.com → **New → Blueprint** → pick this repo. It reads `render.yaml` and creates the `gasolina-api` service.
 2. Fill the environment variables it asks for:
