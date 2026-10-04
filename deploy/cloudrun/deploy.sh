@@ -20,6 +20,14 @@ step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 cd "$(git rev-parse --show-toplevel)"
 gcloud config set project "$PROJECT" >/dev/null
 
+if [[ "$(gcloud billing projects describe "$PROJECT" --format='value(billingEnabled)' 2>/dev/null)" != "True" ]]; then
+  echo "Billing isn't linked to project $PROJECT yet. Your billing accounts:"
+  gcloud billing accounts list
+  echo "Link one (use the ACCOUNT_ID from the list above), then run this script again:"
+  echo "  gcloud billing projects link $PROJECT --billing-account=ACCOUNT_ID"
+  exit 1
+fi
+
 step "1/8 Turning on the Google services we use (first time ~1 minute)"
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
   secretmanager.googleapis.com cloudscheduler.googleapis.com billingbudgets.googleapis.com cloudbilling.googleapis.com
