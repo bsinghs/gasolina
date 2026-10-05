@@ -25,6 +25,12 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - [x] Connected the ends (Oct 4): API `CORS_ORIGINS` includes the site; Supabase Site URL + Redirect URLs set. Owner signed in on a phone at https://shift-close.pages.dev
 - [ ] Sign in as owner, add stores and people, run one day through on a phone
 
+## Test environment (Oct 5)
+
+- [x] Second Supabase project `gasolina-test`, `test` branch → https://test.shift-close.pages.dev, `deploy.sh test`, TEST banner, admin **Reset test data** (test only)
+- [ ] Owner of the Google client: add test callback; enable Google in test Supabase; set test DB password; first `deploy.sh test`
+- Workflow: `test` branch first, then merge to `main` (see CLAUDE.md)
+
 ## Next: before the demo
 
 - [ ] Open the app a minute early (Render's free plan sleeps after 15 minutes idle)
@@ -46,7 +52,7 @@ Long-term direction: [ROADMAP.md](ROADMAP.md): replace QuickBooks (~$30/month pe
 1. **Automatic checks on every push** (GitHub Actions): API tests + web build, red/green on each change. $0
 2. **Click tests with Playwright**: employee submits on a phone, owner sends back, fix, approve, export. Runs on every push. $0
 3. **Error alerts** (e.g. Sentry free plan): email when the app errors on someone's phone. $0 tier
-4. **Test copy of the app** (staging): second free Supabase project + Cloud Run service, fake data. ~$0
+4. ~~Test copy of the app~~: done Oct 5 (finish setup steps above)
 5. **Training from the same Playwright scripts**: 60-second phone video + one-page picture guide for employees; owner walkthrough. Re-run to refresh when screens change
 6. Builder + independent reviewer for each new feature (start with taxable / non-taxable)
 
