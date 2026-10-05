@@ -31,6 +31,8 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - [ ] Set the QuickBooks account names in Settings to his real chart of accounts
 - [ ] Demo script: employee submits on phone → owner sends back once → approves → export → import into a QuickBooks sandbox
 
+Long-term direction: [ROADMAP.md](ROADMAP.md) (front office for the station; QuickBooks stays the books).
+
 ## After the demo (in order)
 
 1. **Shift-report photo upload** on the worksheet (tables already exist)
@@ -51,6 +53,7 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 ## Open questions for the owner
 
 - QuickBooks Online or Desktop? Exact account names?
+- Which 3 QuickBooks tasks take the most time each week? (Decides what we bring in first)
 - One shift per day, or one worksheet per shift?
 - Over/short amount that should trigger a warning
 - Close out once a day, or every shift? (Day / Night / Mid in his worksheet)
