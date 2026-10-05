@@ -20,7 +20,7 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - [x] Supabase: database password reset, Session pooler connection string saved
 - [x] Google sign-in: Google Cloud project `gasolina-510519`, OAuth client, enabled in Supabase (Testing mode: test users only)
 - [x] API live on Render: https://gasolina-api-c7yd.onrender.com (`/api/health` OK, connected to Supabase)
-- [x] API moved to Google Cloud Run (Oct 4): https://gasolina-api-v7l555dt2a-uk.a.run.app (`/api/health` OK). `make live` uses it. Retire Render once the site is live
+- [x] API moved to Google Cloud Run (Oct 4): https://gasolina-api-v7l555dt2a-uk.a.run.app (`/api/health` OK). `make live` uses it. Render service **suspended** Oct 5
 - [x] Cloudflare Pages (Oct 4): https://shift-close.pages.dev (root `apps/web`, build `npm run build`, output `dist`, settings in `apps/web/.env.production`). Rebuilds on every push to main
 - [x] Connected the ends (Oct 4): API `CORS_ORIGINS` includes the site; Supabase Site URL + Redirect URLs set. Owner signed in on a phone at https://shift-close.pages.dev
 - [ ] Sign in as owner, add stores and people, run one day through on a phone
