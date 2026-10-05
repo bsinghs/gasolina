@@ -69,11 +69,20 @@ gcloud builds submit --config=deploy/cloudrun/cloudbuild.yaml --substitutions=_I
   --service-account="projects/${PROJECT}/serviceAccounts/${RUNTIME_SA}" .
 
 step "6/8 Starting it on Cloud Run"
+# Settings go in a small file so values with @ , : etc. can't confuse gcloud
+ENV_FILE=$(mktemp)
+cat > "$ENV_FILE" <<ENVEOF
+AUTH_MODE: "supabase"
+SUPABASE_URL: "${SUPABASE_URL}"
+BOOTSTRAP_OWNER_EMAIL: "${OWNER_EMAIL}"
+CORS_ORIGINS: "${CORS_ORIGINS}"
+ENVEOF
 gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" \
   --allow-unauthenticated \
-  --cpu=1 --memory=512Mi --min-instances=0 --max-instances=2 --cpu-boost --timeout=60 \
-  --set-env-vars="^@^AUTH_MODE=supabase@SUPABASE_URL=${SUPABASE_URL}@BOOTSTRAP_OWNER_EMAIL=${OWNER_EMAIL}@CORS_ORIGINS=${CORS_ORIGINS}" \
+  --cpu=1 --memory=512Mi --min-instances=0 --max-instances=2 --cpu-boost --timeout=120 \
+  --env-vars-file="$ENV_FILE" \
   --set-secrets=DATABASE_URL=DATABASE_URL:latest
+rm -f "$ENV_FILE"
 URL=$(gcloud run services describe "$SERVICE" --region="$REGION" --format='value(status.url)')
 
 step "7/8 Keep-warm check every 5 minutes (so nobody waits)"
