@@ -21,7 +21,7 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - [x] Google sign-in: Google Cloud project `gasolina-510519`, OAuth client, enabled in Supabase (Testing mode: test users only)
 - [x] API live on Render: https://gasolina-api-c7yd.onrender.com (`/api/health` OK, connected to Supabase)
 - [x] API moved to Google Cloud Run (Oct 4): https://gasolina-api-v7l555dt2a-uk.a.run.app (`/api/health` OK). `make live` uses it. Retire Render once the site is live
-- [ ] Cloudflare Pages: root `apps/web`, build `npm run build`, output `dist`; fill the `VITE_*` variables
+- [x] Cloudflare Pages (Oct 4): https://shift-close.pages.dev (root `apps/web`, build `npm run build`, output `dist`, settings in `apps/web/.env.production`). Rebuilds on every push to main
 - [ ] Connect the ends: `CORS_ORIGINS` on the API, Site URL + Redirect URLs in Supabase
 - [ ] Sign in as owner, add stores and people, run one day through on a phone
 

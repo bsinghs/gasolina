@@ -14,7 +14,7 @@ SERVICE="gasolina-api"
 REPO="gasolina"
 SUPABASE_URL="https://uhwhfrwpuysestjdqawz.supabase.co"
 OWNER_EMAIL="bhajanpreets@gmail.com"
-CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:5173}"   # add the Cloudflare Pages address later, comma-separated
+CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:5173,https://shift-close.pages.dev}"   
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 cd "$(git rev-parse --show-toplevel)"
