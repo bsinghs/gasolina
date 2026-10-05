@@ -8,6 +8,11 @@ The owner shared a newer worksheet: [`docs/reference/owner-worksheet-ggs.html`](
 
 **Not done:** his file has different **fields and math**. Changing them changes what's saved and what goes to QuickBooks, so we need his answers first.
 
+## Confirmed so far
+
+- **Taxable and non-taxable amounts:** the owner wants these on the worksheet (Oct 4). Still to confirm: are they a split of fuel + merch, and should QuickBooks get them separately?
+- Field changes go in step by step after go-live.
+
 ## Differences
 
 | His worksheet | Our app today | Question for the owner |
