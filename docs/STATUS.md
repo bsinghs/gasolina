@@ -36,7 +36,8 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 1. **Shift-report photo upload** on the worksheet (tables already exist)
 2. **AI report scanning**: photo of the register report prefills the worksheet, with cross-checks. Spec: [features/ai-report-scan.md](features/ai-report-scan.md) (covers 1 and 2)
 3. **Direct QuickBooks posting**: `services/quickbooks` via Intuit's API instead of CSV
-4. Reminders when a store hasn't submitted; weekly and monthly reports
+4. **Monthly reports** (one or several stores): spec [features/monthly-reports.md](features/monthly-reports.md)
+5. Reminders when a store hasn't submitted
 
 ## Wishlist: quality and training (agreed Oct 4, do later)
 
@@ -52,4 +53,6 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - QuickBooks Online or Desktop? Exact account names?
 - One shift per day, or one worksheet per shift?
 - Over/short amount that should trigger a warning
+- Close out once a day, or every shift? (Day / Night / Mid in his worksheet)
+- Monthly reports: calendar month or the register's close-month date? Which numbers matter most?
 - Photos of the daily shift-close report and any fuel/pump report (for AI scanning)
