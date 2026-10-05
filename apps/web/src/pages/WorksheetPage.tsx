@@ -1,19 +1,19 @@
-// The daily worksheet: the employee's main screen. Same fields and math as the original prototype.
+// The daily worksheet: the employee's main screen. Layout follows the owner's "GGS Daily Sales Worksheet".
 // Drafts save automatically a moment after typing stops.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { PaidOut, Report } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
-import { OverShortGauge } from "../components/OverShortGauge";
 import { PaidOutLines } from "../components/PaidOutLines";
 import { StatusChip } from "../components/StatusChip";
 import { prettyTime, today } from "../lib/dates";
-import { formatMoney, toApiAmount, toCents } from "../lib/money";
+import { formatMoney, formatOverShort, toApiAmount, toCents } from "../lib/money";
 import { calculate } from "../lib/reconciliation";
 
+const TWO_COLS = { "--cols": 2 } as CSSProperties;
 const MONEY_FIELDS = ["fuel_sale", "merch_sale", "sales_tax", "credit", "debit", "ebt", "cash_drop"] as const;
 
 interface Form {
@@ -155,11 +155,12 @@ export function WorksheetPage() {
     );
   }
 
-  const moneyRow = (key: (typeof MONEY_FIELDS)[number], label: string) => (
-    <div className="field-row">
-      <label htmlFor={key}>{label}<span className="unit">$</span></label>
+  const moneyField = (key: (typeof MONEY_FIELDS)[number], label: string, hint?: string) => (
+    <div className="field">
+      <label htmlFor={key}>{label} ($)</label>
       <input id={key} className="num" inputMode="decimal" placeholder="0.00" value={form[key]}
         disabled={!editable} onChange={(e) => change({ [key]: e.target.value } as Partial<Form>)} />
+      {hint && <span className="hint">{hint}</span>}
     </div>
   );
 
@@ -167,29 +168,15 @@ export function WorksheetPage() {
   const checkLines = form.paid_outs.filter((p) => p.kind === "check");
   const gallons = parseFloat(form.gallons.replace(/,/g, "")) || 0;
   const avgPrice = gallons > 0 ? toCents(form.fuel_sale) / 100 / gallons : 0;
+  const hasCashDrop = form.cash_drop.trim() !== "";
+  const os = totals.overShort;
+  const osKind = !hasCashDrop || os === 0 ? "" : os < 0 ? "danger" : "success";
+  const osText = !hasCashDrop ? "Enter the cash drop to reconcile" : os === 0 ? "Balanced" : os < 0 ? `Short by ${formatMoney(-os)}` : `Over by ${formatMoney(os)}`;
+  const statusText = loading ? "Loading…" : saving ? "Saving…" : dirty ? "Unsaved changes" : report ? `Saved ${prettyTime(report.updated_at)}` : "New worksheet";
+  const storeName = me.stores.find((s) => s.id === storeId)?.name ?? "";
 
   return (
-    <main className="page narrow stack">
-      <section className="card card-pad stack" style={{ background: "var(--ink)", color: "#fff", border: "none" }}>
-        <div className="row-wrap">
-          <label className="label-stack" style={{ color: "#9fb2b7", flex: 1, minWidth: 160 }}>
-            Store
-            <select value={storeId} onChange={(e) => setParams({ store: e.target.value, date })}>
-              {me.stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </label>
-          <label className="label-stack" style={{ color: "#9fb2b7", flex: 1, minWidth: 140 }}>
-            Business date
-            <input type="date" className="text" value={date} max={today()}
-              onChange={(e) => e.target.value && setParams({ store: storeId, date: e.target.value })} />
-          </label>
-        </div>
-        <div className="muted" style={{ color: "#9fb2b7", display: "flex", gap: 10, alignItems: "center" }}>
-          <StatusChip status={status} />
-          {loading ? "Loading…" : saving ? "Saving…" : dirty ? "Unsaved changes" : report ? `Saved ${prettyTime(report.updated_at)}` : "New worksheet"}
-        </div>
-      </section>
-
+    <main className="page sheet stack">
       {report?.status === "returned" && report.review_note && (
         <Notice kind="error"><strong>Sent back by the owner:</strong> “{report.review_note}” Fix it and submit again.</Notice>
       )}
@@ -199,90 +186,126 @@ export function WorksheetPage() {
       {error && <Notice kind="error">{error}</Notice>}
       {unnamedLine && <Notice kind="warn">Add who each paid-out was paid to, so it can be saved.</Notice>}
 
-      <section className="card">
-        <div className="card-head">Sales</div>
-        <div className="card-body">
-          {moneyRow("fuel_sale", "Fuel sale")}
-          {moneyRow("merch_sale", "Merchant sale")}
-          {moneyRow("sales_tax", "Sales tax collected")}
-        </div>
-        <div className="total-row"><span>Total sales</span><span>{formatMoney(totals.totalSales)}</span></div>
-      </section>
-
-      <section className="card">
-        <div className="card-head">Fuel volume</div>
-        <div className="card-body">
-          <div className="field-row">
-            <label htmlFor="gallons">Fuel gallons sold<span className="unit">gal</span></label>
-            <input id="gallons" className="num" inputMode="decimal" placeholder="0.0" value={form.gallons}
-              disabled={!editable} onChange={(e) => change({ gallons: e.target.value })} />
+      <div className="sheet-card">
+        <header className="sheet-header">
+          <h1>Daily Sales Worksheet</h1>
+          <div className="meta">
+            <select aria-label="Store" value={storeId} onChange={(e) => setParams({ store: e.target.value, date })}>
+              {me.stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <input type="date" aria-label="Business date" value={date} max={today()}
+              onChange={(e) => e.target.value && setParams({ store: storeId, date: e.target.value })} />
           </div>
-          <div className="sub-row"><span>Avg. price / gallon</span><strong>{avgPrice ? `$${avgPrice.toFixed(2)}` : "–"}</strong></div>
-        </div>
-      </section>
+        </header>
 
-      <section className="card">
-        <div className="card-head">Electronic &amp; food stamp tender</div>
-        <div className="card-body">
-          {moneyRow("credit", "Credit card")}
-          {moneyRow("debit", "Debit card")}
-          {moneyRow("ebt", "Food stamp / EBT")}
+        <div className="sheet-toolbar no-print">
+          <span className="status"><StatusChip status={status} /> {statusText}</span>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => window.print()}>Print / PDF</button>
         </div>
-        <div className="total-row"><span>Total non-cash tender</span><span>{formatMoney(totals.nonCash)}</span></div>
-      </section>
-
-      <section className="card">
-        <div className="card-head">Paid outs</div>
-        <div className="card-body">
-          <PaidOutLines kind="cash" lines={cashLines} disabled={!editable}
-            onChange={(lines) => change({ paid_outs: [...lines, ...checkLines] })} />
-          <PaidOutLines kind="check" lines={checkLines} disabled={!editable}
-            onChange={(lines) => change({ paid_outs: [...cashLines, ...lines] })} />
+        <div className="sheet-toolbar print-only">
+          {storeName} · {date} · {me.name}
         </div>
-        <div className="total-row">
-          <span>Total paid out <span className="muted">(cash only, checks not deducted)</span></span>
-          <span>{formatMoney(totals.cashPaidOut)}</span>
-        </div>
-      </section>
 
-      <section className="card">
-        <div className="card-head">Cash drop</div>
-        <div className="card-body">{moneyRow("cash_drop", "Cash drop / actual count")}</div>
-      </section>
+        <section className="section">
+          <h2 className="section-title">Sales</h2>
+          <div className="fields">
+            {moneyField("fuel_sale", "Fuel Sales")}
+            {moneyField("merch_sale", "Merchandise Sales")}
+            {moneyField("sales_tax", "Tax Collected")}
+          </div>
+          <div className="calc-box">
+            <span className="calc-label">Total Sales <small>Fuel + Merchandise + Tax</small></span>
+            <span className="calc-value">{formatMoney(totals.totalSales)}</span>
+          </div>
+        </section>
 
-      <section className="card">
-        <div className="card-head">Note to owner</div>
-        <div className="card-body" style={{ paddingTop: 12 }}>
-          <textarea aria-label="Note to owner" rows={2} style={{ width: "100%" }} placeholder="Optional, e.g. pump 4 down after 3pm"
-            value={form.employee_note} disabled={!editable} onChange={(e) => change({ employee_note: e.target.value })} />
-        </div>
-      </section>
+        <section className="section">
+          <h2 className="section-title">Payments Received (non-cash)</h2>
+          <div className="fields">
+            {moneyField("credit", "Credit Cards")}
+            {moneyField("debit", "Debit Cards")}
+            {moneyField("ebt", "Food Stamps / EBT")}
+          </div>
+          <div className="calc-box">
+            <span className="calc-label">Total Non-Cash</span>
+            <span className="calc-value">{formatMoney(totals.nonCash)}</span>
+          </div>
+        </section>
 
-      <section className="summary">
-        <h2>RECONCILIATION</h2>
-        <div className="sum-line"><span>Total sales</span><strong>{formatMoney(totals.totalSales)}</strong></div>
-        <div className="sum-line"><span>Less non-cash tender</span><strong>{formatMoney(totals.nonCash)}</strong></div>
-        <div className="sum-line"><span>Less paid outs (cash only)</span><strong>{formatMoney(totals.cashPaidOut)}</strong></div>
-        <div className="sum-line"><span>Expected cash</span><strong>{formatMoney(totals.expectedCash)}</strong></div>
-        <OverShortGauge cents={totals.overShort} hasCashDrop={form.cash_drop.trim() !== ""} />
-        {editable && status !== "submitted" && (
-          <div style={{ marginTop: 14 }}>
-            {confirmOver && (
-              <div style={{ marginBottom: 10 }}>
-                <Notice kind="warn">This day is off by more than {formatMoney(threshold)}. Add a note explaining why, or submit anyway.</Notice>
-              </div>
+        <section className="section">
+          <h2 className="section-title">Paid Outs</h2>
+          <div className="grid-2">
+            <PaidOutLines kind="cash" lines={cashLines} disabled={!editable}
+              onChange={(lines) => change({ paid_outs: [...lines, ...checkLines] })} />
+            <PaidOutLines kind="check" lines={checkLines} disabled={!editable}
+              onChange={(lines) => change({ paid_outs: [...cashLines, ...lines] })} />
+          </div>
+          <div className="calc-box">
+            <span className="calc-label">Cash Paid Out <small>Checks don't come out of the drawer</small></span>
+            <span className="calc-value">{formatMoney(totals.cashPaidOut)}</span>
+          </div>
+        </section>
+
+        <section className="section">
+          <h2 className="section-title">Cash Management</h2>
+          <div className="fields" style={TWO_COLS}>
+            {moneyField("cash_drop", "Cash Drop / Actual Cash")}
+            <div className="field">
+              <label htmlFor="expected">Expected Cash</label>
+              <input id="expected" readOnly value={formatMoney(totals.expectedCash)} tabIndex={-1} />
+              <span className="hint">Total sales − non-cash − cash paid out</span>
+            </div>
+          </div>
+          <div className={`calc-box ${osKind}`} aria-live="polite">
+            <span className="calc-label">Over / Short <small>{osText}</small></span>
+            <span className="calc-value">{hasCashDrop ? formatOverShort(os) : "–"}</span>
+          </div>
+        </section>
+
+        <section className="section">
+          <h2 className="section-title">Gallons Sold</h2>
+          <div className="fields" style={TWO_COLS}>
+            <div className="field">
+              <label htmlFor="gallons">Total Gallons</label>
+              <input id="gallons" className="num" inputMode="decimal" placeholder="0.0" value={form.gallons}
+                disabled={!editable} onChange={(e) => change({ gallons: e.target.value })} />
+            </div>
+            <div className="field">
+              <label htmlFor="avg">Avg. Price / Gallon</label>
+              <input id="avg" readOnly tabIndex={-1} value={avgPrice ? `$${avgPrice.toFixed(3)}` : "–"} />
+            </div>
+          </div>
+        </section>
+
+        <section className="section">
+          <h2 className="section-title">Notes / Comments</h2>
+          <div className="field">
+            <textarea aria-label="Notes" rows={3} placeholder="Any discrepancies, special notes, or comments…"
+              value={form.employee_note} disabled={!editable} onChange={(e) => change({ employee_note: e.target.value })} />
+          </div>
+        </section>
+
+        {(editable && status !== "submitted") || (status === "submitted" && !isOwner) ? (
+          <div className="sheet-footer no-print">
+            {editable && status !== "submitted" && (
+              <>
+                {confirmOver && (
+                  <div style={{ marginBottom: 10 }}>
+                    <Notice kind="warn">This day is off by more than {formatMoney(threshold)}. Add a note explaining why, or submit anyway.</Notice>
+                  </div>
+                )}
+                <button className="btn btn-success btn-block" disabled={saving || loading || unnamedLine} onClick={submit}>
+                  {confirmOver ? "Submit anyway" : "Submit for approval"}
+                </button>
+                <p className="muted" style={{ textAlign: "center", margin: "8px 0 0" }}>Saves automatically as you type.</p>
+              </>
             )}
-            <button className="btn btn-primary btn-block" disabled={saving || loading || unnamedLine} onClick={submit}>
-              {confirmOver ? "Submit anyway" : "Submit for approval"}
-            </button>
+            {status === "submitted" && !isOwner && (
+              <p className="muted" style={{ textAlign: "center", margin: 0 }}>Submitted. The owner will review it.</p>
+            )}
           </div>
-        )}
-        {status === "submitted" && !isOwner && (
-          <p style={{ textAlign: "center", color: "#9fb2b7", fontSize: 12.5, marginBottom: 0 }}>
-            Submitted. The owner will review it.
-          </p>
-        )}
-      </section>
+        ) : null}
+      </div>
     </main>
   );
 }

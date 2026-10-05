@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GGS Daily Sales Worksheet</title>
+  <style>
+    :root {
+      --primary: #1a365d;
+      --accent: #2b6cb0;
+      --success: #276749;
+      --danger: #c53030;
+      --bg: #f7fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #2d3748;
+      --muted: #718096;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 20px 24px;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.9rem;
+    }
+
+    header input, header select {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    header input::placeholder {
+      color: rgba(255,255,255,0.6);
+    }
+
+    .toolbar {
+      background: #edf2f7;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    .btn-primary:hover { background: #2c5282; }
+
+    .btn-success {
+      background: var(--success);
+      color: white;
+    }
+    .btn-success:hover { background: #22543d; }
+
+    .btn-secondary {
+      background: #e2e8f0;
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: #cbd5e0; }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+    .btn-danger:hover { background: #9b2c2c; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0 0 12px 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    .section {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: "";
+      width: 4px;
+      height: 16px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    @media (max-width: 700px) {
+      .grid-2, .grid-3, .grid-4 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    .field input, .field select, .field textarea {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      background: #fff;
+      transition: border-color 0.15s;
+    }
+
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(43,108,176,0.15);
+    }
+
+    .field input[readonly] {
+      background: #edf2f7;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .currency::before {
+      content: "$";
+      margin-right: 2px;
+      color: var(--muted);
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+    }
+
+    .input-group input {
+      flex: 1;
+      border-radius: 6px 0 0 6px;
+    }
+
+    .input-group .addon {
+      background: #edf2f7;
+      border: 1px solid var(--border);
+      border-left: none;
+      padding: 9px 12px;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .calc-box {
+      background: #ebf8ff;
+      border: 1px solid #bee3f8;
+      border-radius: 8px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+
+    .calc-box.success {
+      background: #f0fff4;
+      border-color: #9ae6b4;
+    }
+
+    .calc-box.danger {
+      background: #fff5f5;
+      border-color: #feb2b2;
+    }
+
+    .calc-label {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .calc-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 8px 10px;
+      background: #edf2f7;
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    td {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    td input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      background: transparent;
+      font-size: 0.9rem;
+    }
+
+    td input:focus {
+      border-color: var(--accent);
+      background: white;
+      outline: none;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: 0.95rem;
+    }
+
+    .summary-row:last-child {
+      border-bottom: none;
+      font-weight: 700;
+      font-size: 1.05rem;
+      padding-top: 12px;
+    }
+
+    .over-short-positive { color: var(--success); }
+    .over-short-negative { color: var(--danger); }
+
+    .footer-note {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 20px;
+      padding: 12px;
+    }
+
+    /* Print styles */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      .toolbar, .no-print {
+        display: none !important;
+      }
+      .card {
+        box-shadow: none;
+        border: none;
+      }
+      header {
+        border-radius: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .section {
+        break-inside: avoid;
+      }
+    }
+
+    .status-bar {
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 8px 16px;
+      background: #f7fafc;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <header>
+        <h1>GGS Daily Sales Worksheet</h1>
+        <div class="meta">
+          <input type="date" id="reportDate" />
+          <select id="shift">
+            <option value="Day">Day Shift</option>
+            <option value="Night">Night Shift</option>
+            <option value="Mid">Mid Shift</option>
+          </select>
+          <input type="text" id="employee" placeholder="Employee Name" style="width:160px" />
+        </div>
+      </header>
+
+      <div class="toolbar no-print">
+        <button class="btn-primary" onclick="calculateAll()">Calculate</button>
+        <button class="btn-success" onclick="saveData()">Save Locally</button>
+        <button class="btn-secondary" onclick="loadData()">Load Saved</button>
+        <button class="btn-secondary" onclick="window.print()">Print / PDF</button>
+        <button class="btn-danger" onclick="clearAll()">Clear All</button>
+      </div>
+
+      <!-- SALES -->
+      <div class="section">
+        <div class="section-title">Sales</div>
+        <div class="grid-2">
+          <div class="field">
+            <label>Fuel Sales ($)</label>
+            <input type="number" id="fuelSale" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Merchandise Sales ($)</label>
+            <input type="number" id="merchSale" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+        </div>
+
+        <div class="grid-3" style="margin-top:16px">
+          <div class="field">
+            <label>Taxable Amount ($)</label>
+            <input type="number" id="taxable" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Non-Taxable Amount ($)</label>
+            <input type="number" id="nonTaxable" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Tax Collected ($)</label>
+            <input type="number" id="tax" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+        </div>
+
+        <div class="calc-box" style="margin-top:16px">
+          <span class="calc-label">Subtotal (Taxable + Non-Taxable + Tax)</span>
+          <span class="calc-value" id="subtotalDisplay">$0.00</span>
+        </div>
+      </div>
+
+      <!-- PAYMENTS -->
+      <div class="section">
+        <div class="section-title">Payments Received</div>
+        <div class="grid-4">
+          <div class="field">
+            <label>Cash</label>
+            <input type="number" id="cashPaid" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Credit Cards</label>
+            <input type="number" id="creditCards" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Debit Cards</label>
+            <input type="number" id="debitCards" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Food Stamps / EBT</label>
+            <input type="number" id="foodStamps" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+        </div>
+
+        <div style="margin-top:18px">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <strong style="font-size:0.9rem">Checks</strong>
+            <button class="btn-secondary btn-sm no-print" onclick="addCheckRow()">+ Add Check</button>
+          </div>
+          <table id="checksTable">
+            <thead>
+              <tr>
+                <th style="width:20%">Check #</th>
+                <th style="width:45%">Name</th>
+                <th style="width:25%">Amount ($)</th>
+                <th style="width:10%" class="no-print"></th>
+              </tr>
+            </thead>
+            <tbody id="checksBody">
+              <!-- rows added dynamically -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="calc-box" style="margin-top:16px">
+          <span class="calc-label">Total Payments Received</span>
+          <span class="calc-value" id="totalPaymentsDisplay">$0.00</span>
+        </div>
+      </div>
+
+      <!-- CASH MANAGEMENT -->
+      <div class="section">
+        <div class="section-title">Cash Management</div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Starting Cash / Change Fund ($)</label>
+            <input type="number" id="startingCash" step="0.01" min="0" value="0" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Cash Paid Out ($)</label>
+            <input type="number" id="cashPaidOut" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Safe Drops ($)</label>
+            <input type="number" id="drops" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top:16px">
+          <div class="field">
+            <label>Actual Cash in Drawer ($)</label>
+            <input type="number" id="actualCash" step="0.01" min="0" placeholder="0.00" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Expected Cash in Drawer</label>
+            <input type="text" id="expectedCash" readonly value="$0.00" />
+          </div>
+        </div>
+
+        <div class="calc-box" id="overShortBox" style="margin-top:16px">
+          <span class="calc-label">Over / Short</span>
+          <span class="calc-value" id="overShortDisplay">$0.00</span>
+        </div>
+      </div>
+
+      <!-- GALLONS -->
+      <div class="section">
+        <div class="section-title">Gallons Sold</div>
+        <div class="grid-3">
+          <div class="field">
+            <label>Regular</label>
+            <input type="number" id="galRegular" step="0.001" min="0" placeholder="0.000" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Midgrade</label>
+            <input type="number" id="galMid" step="0.001" min="0" placeholder="0.000" oninput="calculateAll()" />
+          </div>
+          <div class="field">
+            <label>Premium</label>
+            <input type="number" id="galPrem" step="0.001" min="0" placeholder="0.000" oninput="calculateAll()" />
+          </div>
+        </div>
+        <div class="calc-box" style="margin-top:12px">
+          <span class="calc-label">Total Gallons Sold</span>
+          <span class="calc-value" id="totalGallonsDisplay">0.000</span>
+        </div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="section">
+        <div class="section-title">Inventory Report (Ending)</div>
+        <div class="grid-3">
+          <div class="field">
+            <label>1: Regular</label>
+            <input type="number" id="inv1" step="0.001" min="0" placeholder="0.000" />
+          </div>
+          <div class="field">
+            <label>2: Regular</label>
+            <input type="number" id="inv2" step="0.001" min="0" placeholder="0.000" />
+          </div>
+          <div class="field">
+            <label>3: Premium</label>
+            <input type="number" id="inv3" step="0.001" min="0" placeholder="0.000" />
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTES -->
+      <div class="section">
+        <div class="section-title">Notes / Comments</div>
+        <div class="field">
+          <textarea id="notes" rows="3" placeholder="Any discrepancies, special notes, or comments..."></textarea>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <span id="lastSaved">Not saved yet</span>
+        <span>GGS Worksheet • Auto-calculates on change</span>
+      </div>
+    </div>
+
+    <div class="footer-note no-print">
+      Data is saved only in your browser (localStorage). Print or export to PDF for permanent records.
+    </div>
+  </div>
+
+  <script>
+    // ---------- Helpers ----------
+    function num(id) {
+      const el = document.getElementById(id);
+      if (!el) return 0;
+      const v = parseFloat(el.value);
+      return isNaN(v) ? 0 : v;
+    }
+
+    function money(val) {
+      return "$" + val.toFixed(2);
+    }
+
+    function setText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+
+    // ---------- Checks table ----------
+    function addCheckRow(checkNo = "", name = "", amount = "") {
+      const tbody = document.getElementById("checksBody");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="text" class="check-no" value="${checkNo}" placeholder="Check #" /></td>
+        <td><input type="text" class="check-name" value="${name}" placeholder="Payee name" /></td>
+        <td><input type="number" class="check-amount" step="0.01" min="0" value="${amount}" placeholder="0.00" oninput="calculateAll()" /></td>
+        <td class="no-print"><button class="btn-danger btn-sm" onclick="this.closest('tr').remove(); calculateAll();">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    function getChecksTotal() {
+      let total = 0;
+      document.querySelectorAll(".check-amount").forEach(inp => {
+        const v = parseFloat(inp.value);
+        if (!isNaN(v)) total += v;
+      });
+      return total;
+    }
+
+    function getChecksData() {
+      const rows = [];
+      document.querySelectorAll("#checksBody tr").forEach(tr => {
+        const no = tr.querySelector(".check-no")?.value || "";
+        const name = tr.querySelector(".check-name")?.value || "";
+        const amt = parseFloat(tr.querySelector(".check-amount")?.value) || 0;
+        if (no || name || amt) rows.push({ no, name, amount: amt });
+      });
+      return rows;
+    }
+
+    // ---------- Main calculation ----------
+    function calculateAll() {
+      const fuel = num("fuelSale");
+      const merch = num("merchSale");
+      const taxable = num("taxable");
+      const nonTax = num("nonTaxable");
+      const tax = num("tax");
+
+      const subtotal = taxable + nonTax + tax;
+      setText("subtotalDisplay", money(subtotal));
+
+      const cash = num("cashPaid");
+      const credit = num("creditCards");
+      const debit = num("debitCards");
+      const food = num("foodStamps");
+      const checks = getChecksTotal();
+
+      const totalPayments = cash + credit + debit + food + checks;
+      setText("totalPaymentsDisplay", money(totalPayments));
+
+      // Cash management
+      const starting = num("startingCash");
+      const paidOut = num("cashPaidOut");
+      const drops = num("drops");
+      const actual = num("actualCash");
+
+      // Expected cash = Starting + Cash payments - Cash paid out - Drops
+      const expected = starting + cash - paidOut - drops;
+      document.getElementById("expectedCash").value = money(expected);
+
+      const overShort = actual - expected;
+      const overShortEl = document.getElementById("overShortDisplay");
+      const box = document.getElementById("overShortBox");
+
+      overShortEl.textContent = (overShort >= 0 ? "+" : "") + money(overShort);
+      overShortEl.className = "calc-value " + (overShort > 0.005 ? "over-short-positive" : overShort < -0.005 ? "over-short-negative" : "");
+
+      box.classList.remove("success", "danger");
+      if (overShort > 0.005) box.classList.add("success");
+      else if (overShort < -0.005) box.classList.add("danger");
+
+      // Gallons
+      const gReg = num("galRegular");
+      const gMid = num("galMid");
+      const gPrem = num("galPrem");
+      setText("totalGallonsDisplay", (gReg + gMid + gPrem).toFixed(3));
+    }
+
+    // ---------- Persistence ----------
+    function collectData() {
+      return {
+        reportDate: document.getElementById("reportDate").value,
+        shift: document.getElementById("shift").value,
+        employee: document.getElementById("employee").value,
+        fuelSale: document.getElementById("fuelSale").value,
+        merchSale: document.getElementById("merchSale").value,
+        taxable: document.getElementById("taxable").value,
+        nonTaxable: document.getElementById("nonTaxable").value,
+        tax: document.getElementById("tax").value,
+        cashPaid: document.getElementById("cashPaid").value,
+        creditCards: document.getElementById("creditCards").value,
+        debitCards: document.getElementById("debitCards").value,
+        foodStamps: document.getElementById("foodStamps").value,
+        startingCash: document.getElementById("startingCash").value,
+        cashPaidOut: document.getElementById("cashPaidOut").value,
+        drops: document.getElementById("drops").value,
+        actualCash: document.getElementById("actualCash").value,
+        galRegular: document.getElementById("galRegular").value,
+        galMid: document.getElementById("galMid").value,
+        galPrem: document.getElementById("galPrem").value,
+        inv1: document.getElementById("inv1").value,
+        inv2: document.getElementById("inv2").value,
+        inv3: document.getElementById("inv3").value,
+        notes: document.getElementById("notes").value,
+        checks: getChecksData(),
+        savedAt: new Date().toISOString()
+      };
+    }
+
+    function applyData(data) {
+      if (!data) return;
+      const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ""; };
+
+      set("reportDate", data.reportDate);
+      set("shift", data.shift || "Day");
+      set("employee", data.employee);
+      set("fuelSale", data.fuelSale);
+      set("merchSale", data.merchSale);
+      set("taxable", data.taxable);
+      set("nonTaxable", data.nonTaxable);
+      set("tax", data.tax);
+      set("cashPaid", data.cashPaid);
+      set("creditCards", data.creditCards);
+      set("debitCards", data.debitCards);
+      set("foodStamps", data.foodStamps);
+      set("startingCash", data.startingCash ?? "0");
+      set("cashPaidOut", data.cashPaidOut);
+      set("drops", data.drops);
+      set("actualCash", data.actualCash);
+      set("galRegular", data.galRegular);
+      set("galMid", data.galMid);
+      set("galPrem", data.galPrem);
+      set("inv1", data.inv1);
+      set("inv2", data.inv2);
+      set("inv3", data.inv3);
+      set("notes", data.notes);
+
+      // Rebuild checks
+      document.getElementById("checksBody").innerHTML = "";
+      if (data.checks && data.checks.length) {
+        data.checks.forEach(c => addCheckRow(c.no, c.name, c.amount));
+      } else {
+        addCheckRow();
+      }
+
+      calculateAll();
+
+      if (data.savedAt) {
+        const d = new Date(data.savedAt);
+        document.getElementById("lastSaved").textContent = "Last saved: " + d.toLocaleString();
+      }
+    }
+
+    function saveData() {
+      const data = collectData();
+      localStorage.setItem("ggs_worksheet_data", JSON.stringify(data));
+      document.getElementById("lastSaved").textContent = "Last saved: " + new Date().toLocaleString();
+      alert("Data saved in this browser.");
+    }
+
+    function loadData() {
+      const raw = localStorage.getItem("ggs_worksheet_data");
+      if (!raw) {
+        alert("No saved data found.");
+        return;
+      }
+      try {
+        applyData(JSON.parse(raw));
+        alert("Data loaded.");
+      } catch (e) {
+        alert("Could not load saved data.");
+      }
+    }
+
+    function clearAll() {
+      if (!confirm("Clear all fields? This cannot be undone (unless you saved).")) return;
+
+      document.querySelectorAll("input[type=number], input[type=text], textarea").forEach(el => {
+        if (el.id === "reportDate" || el.id === "shift") return;
+        el.value = "";
+      });
+      document.getElementById("startingCash").value = "0";
+      document.getElementById("checksBody").innerHTML = "";
+      addCheckRow();
+      calculateAll();
+      document.getElementById("lastSaved").textContent = "Not saved yet";
+    }
+
+    // ---------- Init ----------
+    window.addEventListener("DOMContentLoaded", () => {
+      // Default date = today
+      const today = new Date().toISOString().slice(0, 10);
+      document.getElementById("reportDate").value = today;
+
+      // Start with one empty check row
+      addCheckRow();
+
+      // Try to restore last session
+      const raw = localStorage.getItem("ggs_worksheet_data");
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          // Only auto-load if same day
+          if (data.reportDate === today) {
+            applyData(data);
+          }
+        } catch (e) {}
+      }
+
+      calculateAll();
+    });
+  </script>
+</body>
+</html>

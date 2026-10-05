@@ -19,8 +19,10 @@ export function PaidOutLines({ kind, lines, disabled, onChange }: Props) {
       <div className="lines-head">{title}</div>
       {lines.map((line, i) => (
         <div className="line-item" key={i}>
-          <input className="li-no" aria-label={`${title} ${i + 1} check number`} placeholder="Check #"
-            value={line.check_no ?? ""} disabled={disabled} onChange={(e) => update(i, { check_no: e.target.value })} />
+          {kind === "check" && (
+            <input className="li-no" aria-label={`${title} ${i + 1} check number`} placeholder="Check #"
+              value={line.check_no ?? ""} disabled={disabled} onChange={(e) => update(i, { check_no: e.target.value })} />
+          )}
           <input className="li-name" aria-label={`${title} ${i + 1} paid to`} placeholder="Paid to"
             value={line.payee} disabled={disabled} onChange={(e) => update(i, { payee: e.target.value })} />
           <input className="li-amt" aria-label={`${title} ${i + 1} amount`} placeholder="0.00" inputMode="decimal"
