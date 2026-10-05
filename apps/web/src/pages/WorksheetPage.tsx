@@ -2,7 +2,7 @@
 // Drafts save automatically a moment after typing stops.
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { PaidOut, Report } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
@@ -150,7 +150,13 @@ export function WorksheetPage() {
   if (!me?.stores.length) {
     return (
       <main className="page narrow">
-        <Notice kind="warn">You're not assigned to a store yet. Ask the owner to add you to one.</Notice>
+        {isOwner ? (
+          <Notice kind="info">
+            No stores yet. Add your first store in <Link to="/settings">Settings</Link>, then come back here.
+          </Notice>
+        ) : (
+          <Notice kind="warn">You're not assigned to a store yet. Ask the owner to add you to one.</Notice>
+        )}
       </main>
     );
   }
