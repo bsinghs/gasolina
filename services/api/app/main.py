@@ -46,4 +46,8 @@ for router in [me_router, stores_router, people_router, reports_router, exports_
 
 @app.get("/api/health")
 def health():
+    """Called every 5 minutes by Cloud Scheduler. Touching the database keeps Supabase's
+    free project from pausing in quiet weeks, and shows if the database is unreachable."""
+    with db.transaction() as conn:
+        db.fetch_one(conn, "select 1 as ok")
     return {"ok": True}
