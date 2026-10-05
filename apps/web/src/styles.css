@@ -213,3 +213,11 @@ tr.missing td { background: #fffff0; }
   .fields { grid-template-columns: repeat(var(--cols, 3), 1fr) !important; }
   input, textarea, select { border-color: #cbd5e0 !important; }
 }
+
+/* ---------- test / demo copies: banner + recoloured header so they can't be mistaken for the real app ---------- */
+.env-banner { position: sticky; top: 0; z-index: 50; text-align: center; font-size: 14px; padding: 8px 12px; color: #fff; letter-spacing: 0.02em; }
+.env-banner-test { background: repeating-linear-gradient(45deg, #c05621, #c05621 14px, #dd6b20 14px, #dd6b20 28px); }
+.env-banner-demo { background: #6b46c1; }
+body.env-test .topbar, body.env-test .sheet-header, body.env-test .signin { background: #7b341e; }
+body.env-demo .topbar, body.env-demo .sheet-header, body.env-demo .signin { background: #44337a; }
+@media print { .env-banner { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }

@@ -26,7 +26,20 @@ Makefile               make demo · make live · make test · make stop · make 
 | Screens locally against the real online API | `make live` |
 | API tests | `make test` (needs Python 3.10+). Workflow tests also need `TEST_DATABASE_URL` |
 | Type-check + build the web app | `cd apps/web && npm run build` |
-| Deploy the API | Cloud Shell: `cd ~/gasolina && git pull && bash deploy/cloudrun/deploy.sh` |
+| Deploy the API | Cloud Shell: `cd ~/gasolina && git pull && bash deploy/cloudrun/deploy.sh test` (then `production`) |
+
+## Two copies of the app: test first, then production
+
+| | **Test** (fake data) | **Production** (real data) |
+| --- | --- | --- |
+| Website | https://test.shift-close.pages.dev (git branch `test`) | https://shift-close.pages.dev (branch `main`) |
+| API | Cloud Run `gasolina-api-test` · `deploy.sh test` | Cloud Run `gasolina-api` · `deploy.sh production` |
+| Database | Supabase `gasolina-test` (`tceosbqbkmkicgmkpqdz`) | Supabase `gasolina` (`uhwhfrwpuysestjdqawz`) |
+| Look | Orange TEST banner, `[TEST]` tab title | Normal |
+| Extras | Admin **Reset test data** (Settings) | None: real data can't be wiped from the app |
+
+Flow: commit to `test` → push → try it on the test site (and `deploy.sh test` if the API changed) → merge `test` into `main` → push → `deploy.sh production`.
+`APP_ENV` (API) and `VITE_APP_ENV` (web) say which copy is running; web settings per copy are in `apps/web/.env.production`, `.env.test`, `.env.demo`.
 
 ## Rules (don't break these)
 

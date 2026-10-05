@@ -66,6 +66,9 @@ function query(params: Record<string, string | boolean | undefined>) {
 export const api = {
   me: () => request<Me>("/me"),
 
+  admin: {
+    resetTestData: () => request<{ ok: boolean; removed: Record<string, number> }>("/admin/reset-test-data", { method: "POST" }),
+  },
   stores: {
     list: () => request<Store[]>("/stores"),
     create: (data: Omit<Store, "id">) => request<Store>("/stores", { method: "POST", body: data }),

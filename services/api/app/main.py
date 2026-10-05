@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core import db
 from app.core.auth import bootstrap_admins, bootstrap_owner
 from app.core.config import get_settings
+from app.modules.admin.router import router as admin_router
 from app.modules.exports.router import router as exports_router
 from app.modules.me.router import router as me_router
 from app.modules.people.router import router as people_router
@@ -40,7 +41,7 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
-for router in [me_router, stores_router, people_router, reports_router, exports_router, settings_router]:
+for router in [me_router, stores_router, people_router, reports_router, exports_router, settings_router, admin_router]:
     app.include_router(router, prefix="/api")
 
 
@@ -50,4 +51,4 @@ def health():
     free project from pausing in quiet weeks, and shows if the database is unreachable."""
     with db.transaction() as conn:
         db.fetch_one(conn, "select 1 as ok")
-    return {"ok": True}
+    return {"ok": True, "env": get_settings().app_env}

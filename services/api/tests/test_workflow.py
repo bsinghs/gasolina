@@ -164,3 +164,27 @@ def test_delete_guards(client):
     assert client.delete(f"/api/people/{admin_id}", headers=OWNER).status_code == 403
     emp = {"X-Dev-Email": "emp@example.com"}
     assert client.delete(f"/api/people/{admin_id}", headers=emp).status_code == 403
+
+
+def test_reset_test_data_only_on_test_env(client):
+    from app.core.config import get_settings
+
+    admin = {"X-Dev-Email": "admin@example.com"}
+    settings = get_settings()
+    # production (default): the endpoint doesn't exist, even for an admin
+    assert settings.app_env == "production"
+    assert client.post("/api/admin/reset-test-data", headers=admin).status_code == 404
+    assert client.get("/api/health").json()["env"] == "production"
+
+    settings.app_env = "test"
+    try:
+        assert client.post("/api/admin/reset-test-data", headers=OWNER).status_code == 403  # owner isn't admin
+        r = client.post("/api/admin/reset-test-data", headers=admin)
+        assert r.status_code == 200, r.text
+        assert r.json()["removed"]["worksheets"] >= 1
+        assert client.get("/api/stores", headers=admin).json() == []
+        people = client.get("/api/people", headers=admin).json()
+        assert people and all(p["role"] == "admin" for p in people)
+        assert client.get("/api/settings", headers=admin).status_code == 200  # settings kept
+    finally:
+        settings.app_env = "production"

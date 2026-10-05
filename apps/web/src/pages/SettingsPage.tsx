@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import type { AppSettings, QbAccounts, Store } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { IS_TEST } from "../lib/env";
 import { Notice } from "../components/Notice";
 
 const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
@@ -18,7 +19,8 @@ const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
 };
 
 export function SettingsPage() {
-  const { refresh } = useAuth();
+  const { refresh, me } = useAuth();
+  const [confirmReset, setConfirmReset] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -91,6 +93,30 @@ export function SettingsPage() {
           </form>
         </div>
       </section>
+
+      {IS_TEST && me?.role === "admin" && (
+        <section className="card" style={{ borderColor: "#dd6b20" }}>
+          <div className="card-head" style={{ color: "#9c4221" }}>Test data (test environment only)</div>
+          <div className="card-body stack" style={{ paddingTop: 12 }}>
+            <p className="muted" style={{ margin: 0 }}>
+              Deletes every store, person (except app admins), worksheet and history entry in this <strong>test</strong> copy.
+              QuickBooks account names are kept. This button doesn't exist in the real app.
+            </p>
+            {confirmReset ? (
+              <div className="row-wrap" style={{ alignItems: "center" }}>
+                <span className="muted">Wipe all test data?</span>
+                <button className="btn btn-danger btn-sm" onClick={() => {
+                  setConfirmReset(false);
+                  guard(async () => { await api.admin.resetTestData(); }, "Test data reset. Start fresh: add a store, then people.");
+                }}>Yes, wipe it</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setConfirmReset(false)}>Cancel</button>
+              </div>
+            ) : (
+              <div><button className="btn btn-danger" onClick={() => setConfirmReset(true)}>Reset test data</button></div>
+            )}
+          </div>
+        </section>
+      )}
 
       {settings && (
         <form className="card" onSubmit={saveSettings}>

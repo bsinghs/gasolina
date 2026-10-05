@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     # Postgres connection string, e.g. postgresql://user:pass@host:5432/db
     database_url: str = "postgresql://postgres@localhost:5432/gasolina"
 
+    # Which copy of the app this is: "production" (real data) or "test" (fake data, extra admin tools)
+    app_env: str = "production"
+
     # "supabase" in production. "dev" lets you sign in by just sending an email in the
     # X-Dev-Email header. Never use "dev" on a public server.
     auth_mode: str = "supabase"
@@ -30,6 +33,10 @@ class Settings(BaseSettings):
 
     # Comma-separated list of web app origins allowed to call the API
     cors_origins: str = "http://localhost:5173"
+
+    @property
+    def is_test(self) -> bool:
+        return self.app_env.lower() == "test"
 
     @property
     def admin_email_list(self) -> list[str]:

@@ -2,22 +2,49 @@
 # Deploy the Shift Close API to Google Cloud Run (free tier).
 #
 # Run it in Google Cloud Shell (console.cloud.google.com → the >_ icon):
-#   git clone https://github.com/bsinghs/gasolina && cd gasolina && bash deploy/cloudrun/deploy.sh
-# Later updates:   cd gasolina && git pull && bash deploy/cloudrun/deploy.sh
+#   cd ~/gasolina && git pull
+#   bash deploy/cloudrun/deploy.sh test          # the TEST copy (fake data) — try changes here first
+#   bash deploy/cloudrun/deploy.sh production    # the REAL app
 #
 # Safe to re-run: each step skips what already exists.
 set -euo pipefail
 
+TARGET="${1:-}"
 PROJECT="${PROJECT:-gasolina-510519}"
 REGION="${REGION:-us-east4}"            # Northern Virginia, next to the Supabase database; free-tier region
-SERVICE="gasolina-api"
 REPO="gasolina"
-SUPABASE_URL="https://uhwhfrwpuysestjdqawz.supabase.co"
 ADMIN_EMAILS="${ADMIN_EMAILS:-bhajanpreets@gmail.com}"   # app admin (support); the business owner is added in the app
-CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:5173,https://shift-close.pages.dev}"   
 
-step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
+case "$TARGET" in
+  test)
+    SERVICE="gasolina-api-test"
+    DB_SECRET="DATABASE_URL_TEST"
+    SUPABASE_URL="https://tceosbqbkmkicgmkpqdz.supabase.co"
+    CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:5173,https://test.shift-close.pages.dev}"
+    KEEP_WARM_JOB="keep-warm-test"
+    ;;
+  production)
+    SERVICE="gasolina-api"
+    DB_SECRET="DATABASE_URL"
+    SUPABASE_URL="https://uhwhfrwpuysestjdqawz.supabase.co"
+    CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:5173,https://shift-close.pages.dev}"
+    KEEP_WARM_JOB="keep-warm"
+    ;;
+  *)
+    echo "Which copy of the API?"
+    echo "  bash deploy/cloudrun/deploy.sh test         (fake data, try things here first)"
+    echo "  bash deploy/cloudrun/deploy.sh production   (the real app)"
+    exit 1
+    ;;
+esac
+
+step() { printf '\n\033[1;34m==> [%s] %s\033[0m\n' "$TARGET" "$*"; }
 cd "$(git rev-parse --show-toplevel)"
+if [[ "$TARGET" == "production" ]]; then
+  printf '\n\033[1;31mYou are deploying the REAL app (production). Did you try this on test first?\033[0m\n'
+  read -rp "Type 'production' to continue: " CONFIRM
+  [[ "$CONFIRM" == "production" ]] || { echo "Stopped."; exit 1; }
+fi
 gcloud config set project "$PROJECT" >/dev/null
 
 if [[ "$(gcloud billing projects describe "$PROJECT" --format='value(billingEnabled)' 2>/dev/null)" != "True" ]]; then
@@ -35,15 +62,15 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
-step "2/8 Database address (stored in Secret Manager, never in code)"
-if gcloud secrets describe DATABASE_URL >/dev/null 2>&1; then
-  echo "Already saved. (To change it: gcloud secrets versions add DATABASE_URL --data-file=-)"
+step "2/8 Database address (stored in Secret Manager as $DB_SECRET, never in code)"
+if gcloud secrets describe "$DB_SECRET" >/dev/null 2>&1; then
+  echo "Already saved. (To change it: gcloud secrets versions add $DB_SECRET --data-file=-)"
 else
-  echo "Paste the DATABASE_URL (same value as on Render: Render → gasolina-api → Environment)."
+  echo "Paste the $TARGET database address (Supabase → Connect → Session pooler, with the password filled in)."
   echo "Typing is hidden. Press Enter when done."
   read -rs DBURL; echo
   [[ "$DBURL" == postgres* ]] || { echo "That doesn't look like a postgresql:// address. Run the script again."; exit 1; }
-  printf '%s' "$DBURL" | gcloud secrets create DATABASE_URL --data-file=- --replication-policy=automatic
+  printf '%s' "$DBURL" | gcloud secrets create "$DB_SECRET" --data-file=- --replication-policy=automatic
   unset DBURL
 fi
 
@@ -72,6 +99,7 @@ step "6/8 Starting it on Cloud Run"
 # Settings go in a small file so values with @ , : etc. can't confuse gcloud
 ENV_FILE=$(mktemp)
 cat > "$ENV_FILE" <<ENVEOF
+APP_ENV: "${TARGET}"
 AUTH_MODE: "supabase"
 SUPABASE_URL: "${SUPABASE_URL}"
 ADMIN_EMAILS: "${ADMIN_EMAILS}"
@@ -81,16 +109,16 @@ gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" \
   --allow-unauthenticated \
   --cpu=1 --memory=512Mi --min-instances=0 --max-instances=2 --cpu-boost --timeout=120 \
   --env-vars-file="$ENV_FILE" \
-  --set-secrets=DATABASE_URL=DATABASE_URL:latest
+  --set-secrets="DATABASE_URL=${DB_SECRET}:latest"
 rm -f "$ENV_FILE"
 URL=$(gcloud run services describe "$SERVICE" --region="$REGION" --format='value(status.url)')
 
 step "7/8 Keep-warm check every 5 minutes (so nobody waits)"
-if gcloud scheduler jobs describe keep-warm --location="$REGION" >/dev/null 2>&1; then
-  gcloud scheduler jobs update http keep-warm --location="$REGION" --schedule="*/5 * * * *" \
+if gcloud scheduler jobs describe "$KEEP_WARM_JOB" --location="$REGION" >/dev/null 2>&1; then
+  gcloud scheduler jobs update http "$KEEP_WARM_JOB" --location="$REGION" --schedule="*/5 * * * *" \
     --uri="${URL}/api/health" --http-method=GET >/dev/null
 else
-  gcloud scheduler jobs create http keep-warm --location="$REGION" --schedule="*/5 * * * *" \
+  gcloud scheduler jobs create http "$KEEP_WARM_JOB" --location="$REGION" --schedule="*/5 * * * *" \
     --uri="${URL}/api/health" --http-method=GET --description="Keeps the Shift Close API awake"
 fi
 echo "Done."
@@ -109,5 +137,5 @@ fi
 step "Checking it works"
 sleep 3
 curl -fsS "${URL}/api/health" && echo
-printf '\n\033[1;32mAPI is live at: %s\033[0m\n' "$URL"
+printf '\n\033[1;32m[%s] API is live at: %s\033[0m\n' "$TARGET" "$URL"
 echo "Copy that address back to Claude."
