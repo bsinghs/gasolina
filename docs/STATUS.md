@@ -20,7 +20,7 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - [x] Supabase: database password reset, Session pooler connection string saved
 - [x] Google sign-in: Google Cloud project `gasolina-510519`, OAuth client, enabled in Supabase (Testing mode: test users only)
 - [x] API live on Render: https://gasolina-api-c7yd.onrender.com (`/api/health` OK, connected to Supabase)
-- [ ] Move the API to Google Cloud Run (free, no 50 s wake-up): run `deploy/cloudrun/deploy.sh` in Cloud Shell, point `apps/web/.env.live` at it, then retire Render
+- [x] API moved to Google Cloud Run (Oct 4): https://gasolina-api-v7l555dt2a-uk.a.run.app (`/api/health` OK). `make live` uses it. Retire Render once the site is live
 - [ ] Cloudflare Pages: root `apps/web`, build `npm run build`, output `dist`; fill the `VITE_*` variables
 - [ ] Connect the ends: `CORS_ORIGINS` on the API, Site URL + Redirect URLs in Supabase
 - [ ] Sign in as owner, add stores and people, run one day through on a phone
