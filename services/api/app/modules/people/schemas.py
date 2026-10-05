@@ -9,7 +9,8 @@ ListedRole = Literal["employee", "manager", "owner", "admin"]  # admin comes fro
 
 class PersonIn(BaseModel):
     email: EmailStr
-    name: str = Field(min_length=1, max_length=120)
+    # Optional: left blank, it's filled from their Google account the first time they sign in
+    name: str = Field(default="", max_length=120)
     role: Role = "employee"
     active: bool = True
     store_ids: list[UUID] = Field(default_factory=list)

@@ -44,7 +44,7 @@ export function PeoplePage() {
   return (
     <main className="page stack">
       <div className="page-head">
-        <div><h1>People</h1><div className="muted">Only people on this list can sign in.</div></div>
+        <div><h1>People</h1><div className="muted">Only people on this list can sign in. Add their Gmail; their name fills in from Google when they first sign in.</div></div>
         <button className="btn btn-primary" onClick={() => startEdit(null)}>+ Add person</button>
       </div>
       {error && <Notice kind="error">{error}</Notice>}
@@ -52,10 +52,10 @@ export function PeoplePage() {
       {editing && (
         <form className="card card-pad stack" onSubmit={save}>
           <div className="row-wrap">
-            <label className="label-stack" style={{ flex: 1, minWidth: 200 }}>Name
-              <input className="text" required value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
-            <label className="label-stack" style={{ flex: 1, minWidth: 220 }}>Email (Gmail or any)
-              <input className="text" type="email" required value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} /></label>
+            <label className="label-stack" style={{ flex: 1, minWidth: 220 }}>Gmail address
+              <input className="text" type="email" required placeholder="name@gmail.com" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} /></label>
+            <label className="label-stack" style={{ flex: 1, minWidth: 200 }}>Name (optional)
+              <input className="text" placeholder="From their Google account" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
             <label className="label-stack">Role
               <select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>
                 <option value="employee">Employee</option><option value="manager">Manager</option><option value="owner">Owner</option>

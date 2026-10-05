@@ -34,7 +34,7 @@ def invite_person(data: PersonIn, _: CurrentUser = Depends(owner_only)):
             row = db.fetch_one(
                 conn,
                 "insert into people (email, name, role, active) values (%s, %s, %s, %s) returning id",
-                [data.email, data.name, data.role, data.active],
+                [data.email, _name_or_placeholder(data), data.role, data.active],
             )
             _set_stores(conn, row["id"], data.store_ids)
             return _get(conn, row["id"])
@@ -53,12 +53,17 @@ def update_person(person_id: UUID, data: PersonIn, user: CurrentUser = Depends(o
         row = db.fetch_one(
             conn,
             "update people set email = %s, name = %s, role = %s, active = %s where id = %s returning id",
-            [data.email, data.name, data.role, data.active, person_id],
+            [data.email, _name_or_placeholder(data), data.role, data.active, person_id],
         )
         if row is None:
             raise not_found("Person not found")
         _set_stores(conn, person_id, data.store_ids)
         return _get(conn, person_id)
+
+
+def _name_or_placeholder(data: PersonIn) -> str:
+    """Blank name -> the email's first part, which sign-in replaces with their Google name."""
+    return data.name.strip() or data.email.split("@")[0]
 
 
 def _set_stores(conn: Connection, person_id: UUID, store_ids: list[UUID]) -> None:
