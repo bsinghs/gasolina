@@ -114,3 +114,53 @@ def test_employee_needs_a_store(client):
     assert r.status_code == 400 and "store" in r.json()["detail"]
     owner = {"email": "owner2@example.com", "role": "owner", "store_ids": []}
     assert client.post("/api/people", json=owner, headers=OWNER).status_code == 200
+
+
+def test_inactive_store_cant_be_assigned(client):
+    closed = client.post("/api/stores", json={"name": "Closed Store"}, headers=OWNER).json()
+    client.patch(f"/api/stores/{closed['id']}", json={"name": "Closed Store", "active": False}, headers=OWNER)
+    r = client.post("/api/people", json={"email": "late@example.com", "store_ids": [closed["id"]]}, headers=OWNER)
+    assert r.status_code == 400 and "deactivated" in r.json()["detail"]
+    # someone who already had it keeps it when edited
+    live = client.post("/api/stores", json={"name": "Was Open"}, headers=OWNER).json()
+    p = client.post("/api/people", json={"email": "keeper@example.com", "store_ids": [live["id"]]}, headers=OWNER).json()
+    client.patch(f"/api/stores/{live['id']}", json={"name": "Was Open", "active": False}, headers=OWNER)
+    keep = {"email": "keeper@example.com", "name": "Kim", "role": "employee", "store_ids": [live["id"]]}
+    assert client.patch(f"/api/people/{p['id']}", json=keep, headers=OWNER).status_code == 200
+
+
+def test_delete_unused_store_and_person(client):
+    s = client.post("/api/stores", json={"name": "Typo Store"}, headers=OWNER).json()
+    p = client.post("/api/people", json={"email": "typo@example.com", "store_ids": [s["id"]]}, headers=OWNER).json()
+    assert client.delete(f"/api/people/{p['id']}", headers=OWNER).json() == {"ok": True}
+    assert all(x["id"] != p["id"] for x in client.get("/api/people", headers=OWNER).json())
+    assert client.delete(f"/api/stores/{s['id']}", headers=OWNER).json() == {"ok": True}
+    assert all(x["id"] != s["id"] for x in client.get("/api/stores", headers=OWNER).json())
+    assert client.delete(f"/api/stores/{s['id']}", headers=OWNER).status_code == 404
+
+
+def test_used_store_and_person_cant_be_deleted(client):
+    s = client.post("/api/stores", json={"name": "Busy Store"}, headers=OWNER).json()
+    p = client.post("/api/people", json={"email": "busy@example.com", "store_ids": [s["id"]]}, headers=OWNER).json()
+    busy = {"X-Dev-Email": "busy@example.com"}
+    day = client.put("/api/reports", json={"store_id": s["id"], "business_date": "2026-09-01", "fuel_sale": "10"}, headers=busy)
+    assert day.status_code == 200, day.text
+    r = client.delete(f"/api/stores/{s['id']}", headers=OWNER)
+    assert r.status_code == 409 and "Deactivate" in r.json()["detail"]
+    r = client.delete(f"/api/people/{p['id']}", headers=OWNER)
+    assert r.status_code == 409 and "Deactivate" in r.json()["detail"]
+    # deactivated person can't sign in; history keeps working
+    off = {"email": "busy@example.com", "name": "B", "role": "employee", "active": False, "store_ids": [s["id"]]}
+    assert client.patch(f"/api/people/{p['id']}", json=off, headers=OWNER).status_code == 200
+    assert client.get("/api/me", headers=busy).status_code == 403
+    assert client.get("/api/reports", params={"store_id": s["id"]}, headers=OWNER).json()
+
+
+def test_delete_guards(client):
+    me = client.get("/api/me", headers=OWNER).json()
+    assert client.delete(f"/api/people/{me['id']}", headers=OWNER).status_code == 400
+    admin_id = next(p["id"] for p in client.get("/api/people", headers={"X-Dev-Email": "admin@example.com"}).json()
+                    if p["role"] == "admin")
+    assert client.delete(f"/api/people/{admin_id}", headers=OWNER).status_code == 403
+    emp = {"X-Dev-Email": "emp@example.com"}
+    assert client.delete(f"/api/people/{admin_id}", headers=emp).status_code == 403

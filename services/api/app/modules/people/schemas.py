@@ -1,7 +1,7 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 Role = Literal["employee", "manager", "owner"]  # what the owner can give someone
 ListedRole = Literal["employee", "manager", "owner", "admin"]  # admin comes from ADMIN_EMAILS only
@@ -14,6 +14,11 @@ class PersonIn(BaseModel):
     role: Role = "employee"
     active: bool = True
     store_ids: list[UUID] = Field(default_factory=list)
+
+    @field_validator("store_ids")
+    @classmethod
+    def _unique(cls, v: list[UUID]) -> list[UUID]:
+        return list(dict.fromkeys(v))  # same store twice = once
 
 
 class Person(BaseModel):

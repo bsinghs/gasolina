@@ -47,3 +47,26 @@ def update_store(store_id: UUID, data: StoreIn, _: CurrentUser = Depends(owner_o
     if row is None:
         raise not_found("Store not found")
     return row
+
+
+@router.delete("/{store_id}")
+def delete_store(store_id: UUID, _: CurrentUser = Depends(owner_only)):
+    """Only for stores added by mistake. A store with worksheets must be deactivated instead."""
+    with db.transaction() as conn:
+        if db.fetch_one(conn, "select 1 from stores where id = %s", [store_id]) is None:
+            raise not_found("Store not found")
+        if db.fetch_one(conn, "select 1 from daily_reports where store_id = %s limit 1", [store_id]):
+            raise conflict("This store has worksheets. Deactivate it instead so the records stay.")
+        stranded = db.fetch_all(
+            conn,
+            """select p.name from people p join store_members m on m.person_id = p.id
+               where m.store_id = %s and p.active and p.role in ('employee', 'manager')
+                 and not exists (select 1 from store_members o where o.person_id = p.id and o.store_id <> %s)
+               order by p.name""",
+            [store_id, store_id],
+        )
+        if stranded:
+            names = ", ".join(r["name"] for r in stranded)
+            raise conflict(f"{names} only work(s) at this store. Give them another store (or remove them) first.")
+        db.execute(conn, "delete from stores where id = %s", [store_id])  # store_members cascade
+    return {"ok": True}

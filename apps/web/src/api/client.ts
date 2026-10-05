@@ -70,6 +70,7 @@ export const api = {
     list: () => request<Store[]>("/stores"),
     create: (data: Omit<Store, "id">) => request<Store>("/stores", { method: "POST", body: data }),
     update: (id: string, data: Omit<Store, "id">) => request<Store>(`/stores/${id}`, { method: "PATCH", body: data }),
+    remove: (id: string) => request<{ ok: boolean }>(`/stores/${id}`, { method: "DELETE" }),
   },
 
   people: {
@@ -77,6 +78,7 @@ export const api = {
     invite: (data: Omit<Person, "id" | "has_signed_in">) => request<Person>("/people", { method: "POST", body: data }),
     update: (id: string, data: Omit<Person, "id" | "has_signed_in">) =>
       request<Person>(`/people/${id}`, { method: "PATCH", body: data }),
+    remove: (id: string) => request<{ ok: boolean }>(`/people/${id}`, { method: "DELETE" }),
   },
 
   reports: {

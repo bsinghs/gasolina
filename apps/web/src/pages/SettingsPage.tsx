@@ -20,6 +20,7 @@ const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
 export function SettingsPage() {
   const { refresh } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [newStore, setNewStore] = useState({ name: "", qb_location: "" });
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -62,10 +63,23 @@ export function SettingsPage() {
         <div className="card-body">
           {stores.map((s) => (
             <div key={s.id} className="field-row">
-              <span style={s.active ? undefined : { opacity: 0.5 }}>{s.name}{s.qb_location ? <span className="muted"> · QB location: {s.qb_location}</span> : null}</span>
-              <button className="link-btn" onClick={() => guard(() => api.stores.update(s.id, { ...s, active: !s.active }), s.active ? "Store deactivated." : "Store reactivated.")}>
-                {s.active ? "Deactivate" : "Reactivate"}
-              </button>
+              <span style={s.active ? undefined : { opacity: 0.5 }}>{s.name}{!s.active && <span className="muted"> (deactivated)</span>}{s.qb_location ? <span className="muted"> · QB location: {s.qb_location}</span> : null}</span>
+              {confirmDelete === s.id ? (
+                <span className="row-wrap" style={{ gap: 8, alignItems: "center" }}>
+                  <span className="muted">Delete permanently?</span>
+                  <button className="btn btn-danger btn-sm" onClick={() => { setConfirmDelete(null); guard(() => api.stores.remove(s.id), "Store deleted."); }}>Yes, delete</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                </span>
+              ) : (
+                <span className="row-wrap" style={{ gap: 14 }}>
+                  <button className="link-btn" title={s.active ? "Closed or sold: hides it, keeps its history" : undefined}
+                    onClick={() => guard(() => api.stores.update(s.id, { ...s, active: !s.active }), s.active ? "Store deactivated. Its past days stay in Review and Export." : "Store reactivated.")}>
+                    {s.active ? "Deactivate" : "Reactivate"}
+                  </button>
+                  <button className="link-btn" style={{ color: "var(--bad)" }} title="Only for stores added by mistake (no worksheets yet)"
+                    onClick={() => setConfirmDelete(s.id)}>Delete</button>
+                </span>
+              )}
             </div>
           ))}
           <form onSubmit={addStore} className="row-wrap" style={{ paddingTop: 12 }}>

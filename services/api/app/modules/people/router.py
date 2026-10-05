@@ -34,6 +34,7 @@ def invite_person(data: PersonIn, _: CurrentUser = Depends(owner_only)):
     _check_stores(data)
     try:
         with db.transaction() as conn:
+            _check_active_stores(conn, data.store_ids, already=[])
             row = db.fetch_one(
                 conn,
                 "insert into people (email, name, role, active) values (%s, %s, %s, %s) returning id",
@@ -50,10 +51,19 @@ def update_person(person_id: UUID, data: PersonIn, user: CurrentUser = Depends(o
     if person_id == user.id and (data.role != "owner" or not data.active):
         raise bad_request("You can't remove your own owner access")
     _check_stores(data)
+    try:
+        return _update_person(person_id, data)
+    except UniqueViolation:
+        raise conflict("Someone with that email is already on the list")
+
+
+def _update_person(person_id: UUID, data: PersonIn) -> dict:
     with db.transaction() as conn:
         target = db.fetch_one(conn, "select role from people where id = %s", [person_id])
         if target and target["role"] == "admin":
             raise forbidden("The app admin can't be changed here")
+        current = db.fetch_all(conn, "select store_id from store_members where person_id = %s", [person_id])
+        _check_active_stores(conn, data.store_ids, already=[r["store_id"] for r in current])
         row = db.fetch_one(
             conn,
             "update people set email = %s, name = %s, role = %s, active = %s where id = %s returning id",
@@ -63,6 +73,19 @@ def update_person(person_id: UUID, data: PersonIn, user: CurrentUser = Depends(o
             raise not_found("Person not found")
         _set_stores(conn, person_id, data.store_ids)
         return _get(conn, person_id)
+
+
+def _check_active_stores(conn: Connection, store_ids: list[UUID], already: list[UUID]) -> None:
+    """A deactivated store can't be newly given to someone (keeping an existing one is fine)."""
+    new = [s for s in store_ids if s not in already]
+    if not new:
+        return
+    rows = db.fetch_all(conn, "select id, name, active from stores where id = any(%s)", [new])
+    if len(rows) != len(set(new)):
+        raise bad_request("One of the stores doesn't exist")
+    inactive = [r["name"] for r in rows if not r["active"]]
+    if inactive:
+        raise bad_request(f"{', '.join(inactive)} is deactivated. Reactivate it in Settings first")
 
 
 def _check_stores(data: PersonIn) -> None:
@@ -84,3 +107,28 @@ def _set_stores(conn: Connection, person_id: UUID, store_ids: list[UUID]) -> Non
 
 def _get(conn: Connection, person_id: UUID) -> dict:
     return db.fetch_one(conn, PERSON_SELECT + " where p.id = %s group by p.id", [person_id])
+
+
+@router.delete("/{person_id}")
+def delete_person(person_id: UUID, user: CurrentUser = Depends(owner_only)):
+    """Only for people added by mistake. Anyone with history must be deactivated instead."""
+    if person_id == user.id:
+        raise bad_request("You can't delete yourself")
+    with db.transaction() as conn:
+        target = db.fetch_one(conn, "select role from people where id = %s", [person_id])
+        if target is None:
+            raise not_found("Person not found")
+        if target["role"] == "admin":
+            raise forbidden("The app admin can't be changed here")
+        used = db.fetch_one(
+            conn,
+            """select 1 where exists (select 1 from daily_reports
+                                      where %(p)s in (created_by, submitted_by, reviewed_by))
+                          or exists (select 1 from audit_log where actor_id = %(p)s)
+                          or exists (select 1 from attachments where uploaded_by = %(p)s)""",
+            {"p": person_id},
+        )
+        if used:
+            raise conflict("This person has worksheets or history. Deactivate them instead so the records stay.")
+        db.execute(conn, "delete from people where id = %s", [person_id])  # store_members cascade
+    return {"ok": True}
