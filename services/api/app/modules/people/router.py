@@ -31,6 +31,7 @@ def list_people(user: CurrentUser = Depends(owner_only)):
 
 @router.post("", response_model=Person)
 def invite_person(data: PersonIn, _: CurrentUser = Depends(owner_only)):
+    _check_stores(data)
     try:
         with db.transaction() as conn:
             row = db.fetch_one(
@@ -48,6 +49,7 @@ def invite_person(data: PersonIn, _: CurrentUser = Depends(owner_only)):
 def update_person(person_id: UUID, data: PersonIn, user: CurrentUser = Depends(owner_only)):
     if person_id == user.id and (data.role != "owner" or not data.active):
         raise bad_request("You can't remove your own owner access")
+    _check_stores(data)
     with db.transaction() as conn:
         target = db.fetch_one(conn, "select role from people where id = %s", [person_id])
         if target and target["role"] == "admin":
@@ -61,6 +63,12 @@ def update_person(person_id: UUID, data: PersonIn, user: CurrentUser = Depends(o
             raise not_found("Person not found")
         _set_stores(conn, person_id, data.store_ids)
         return _get(conn, person_id)
+
+
+def _check_stores(data: PersonIn) -> None:
+    """Employees and managers only see their stores, so they need at least one."""
+    if data.role != "owner" and data.active and not data.store_ids:
+        raise bad_request("Pick at least one store for this person (owners see all stores)")
 
 
 def _name_or_placeholder(data: PersonIn) -> str:

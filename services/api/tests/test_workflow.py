@@ -106,3 +106,11 @@ def test_app_admin(client):
     # and the owner can't hand out the admin role
     bad = {"email": "new@example.com", "name": "N", "role": "admin", "store_ids": []}
     assert client.post("/api/people", json=bad, headers=OWNER).status_code == 422
+
+
+def test_employee_needs_a_store(client):
+    no_store = {"email": "nostore@example.com", "role": "employee", "store_ids": []}
+    r = client.post("/api/people", json=no_store, headers=OWNER)
+    assert r.status_code == 400 and "store" in r.json()["detail"]
+    owner = {"email": "owner2@example.com", "role": "owner", "store_ids": []}
+    assert client.post("/api/people", json=owner, headers=OWNER).status_code == 200

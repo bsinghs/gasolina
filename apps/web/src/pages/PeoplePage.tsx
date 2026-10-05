@@ -27,6 +27,10 @@ export function PeoplePage() {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
+    if (draft.role !== "owner" && draft.active && draft.store_ids.length === 0) {
+      setError("Pick at least one store for this person (owners see all stores).");
+      return;
+    }
     try {
       if (editing === "new") await api.people.invite(draft);
       else if (editing) await api.people.update(editing, draft);
@@ -69,7 +73,8 @@ export function PeoplePage() {
                   <input type="checkbox" checked={draft.store_ids.includes(s.id)} onChange={() => toggleStore(s.id)} /> {s.name}
                 </label>
               ))}
-              {stores.length === 0 && <span className="muted">Add a store in Settings first.</span>}
+              {stores.length === 0 && <span className="muted">No stores yet. Add one in <a href="/settings">Settings</a> first.</span>}
+              {draft.role === "owner" && stores.length > 0 && <span className="muted">Owners see all stores.</span>}
             </div>
           </fieldset>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
@@ -91,7 +96,9 @@ export function PeoplePage() {
                 <td className="left">{p.name}</td>
                 <td className="left">{p.email}</td>
                 <td className="left">{ROLE_LABEL[p.role] ?? p.role}</td>
-                <td className="left">{p.role === "owner" || p.role === "admin" ? "All" : p.store_ids.map(storeName).join(", ") || "—"}</td>
+                <td className="left">{p.role === "owner" || p.role === "admin" ? "All"
+                  : p.store_ids.length ? p.store_ids.map(storeName).join(", ")
+                  : <span className="neg">No store: Edit to add one</span>}</td>
                 <td>{!p.active ? "Deactivated" : p.has_signed_in ? "Active" : "Invited"}</td>
                 <td>{p.role === "admin"
                   ? <span className="muted" title="Runs the app and helps with support. Set up by the app, not on this page.">Managed by app</span>
