@@ -44,7 +44,7 @@ def _jwks_client() -> jwt.PyJWKClient:
     return jwt.PyJWKClient(url, cache_keys=True)
 
 
-def _email_from_token(token: str) -> tuple[str, str | None]:
+def _email_from_token(token: str) -> tuple[str, str | None, str | None]:
     """New Supabase projects sign tokens with a key pair (checked against the project's public keys).
     Older projects use a shared secret (HS256), which needs SUPABASE_JWT_SECRET."""
     settings = get_settings()
@@ -62,10 +62,17 @@ def _email_from_token(token: str) -> tuple[str, str | None]:
     email = claims.get("email")
     if not email:
         raise HTTPException(status_code=401, detail="Sign-in token has no email")
-    return email, claims.get("sub")
+    meta = claims.get("user_metadata") or {}
+    full_name = (meta.get("full_name") or meta.get("name") or "").strip() or None
+    return email, claims.get("sub"), full_name
 
 
-def _load_person(email: str, auth_user_id: str | None) -> CurrentUser:
+def _is_placeholder_name(name: str, email: str) -> bool:
+    """Names the app made up (first-owner bootstrap, admin from ADMIN_EMAILS), not ones a person typed."""
+    return name.strip().lower() in {"owner", email.split("@")[0].lower()}
+
+
+def _load_person(email: str, auth_user_id: str | None, full_name: str | None = None) -> CurrentUser:
     with db.transaction() as conn:
         person = db.fetch_one(
             conn, "select * from people where lower(email) = lower(%s) and active", [email]
@@ -74,6 +81,10 @@ def _load_person(email: str, auth_user_id: str | None) -> CurrentUser:
             raise HTTPException(status_code=403, detail="not_invited")
         if auth_user_id and person["auth_user_id"] is None:
             db.execute(conn, "update people set auth_user_id = %s where id = %s", [auth_user_id, person["id"]])
+        if full_name and _is_placeholder_name(person["name"], person["email"]):
+            # Use the name from their Google account instead of a made-up one
+            db.execute(conn, "update people set name = %s where id = %s", [full_name[:120], person["id"]])
+            person["name"] = full_name[:120]
         stores = db.fetch_all(conn, "select store_id from store_members where person_id = %s", [person["id"]])
     return CurrentUser(
         id=person["id"],
@@ -93,8 +104,8 @@ def current_user(
         return _load_person(x_dev_email, None)
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Please sign in")
-    email, sub = _email_from_token(authorization.split(" ", 1)[1])
-    return _load_person(email, sub)
+    email, sub, full_name = _email_from_token(authorization.split(" ", 1)[1])
+    return _load_person(email, sub, full_name)
 
 
 def owner_only(user: CurrentUser = Depends(current_user)) -> CurrentUser:

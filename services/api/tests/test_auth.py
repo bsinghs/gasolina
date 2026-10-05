@@ -33,7 +33,25 @@ def test_key_pair_token_is_accepted(monkeypatch):
             return type("K", (), {"key": private.public_key()})()
 
     monkeypatch.setattr(auth, "_jwks_client", lambda: FakeJwks())
-    assert auth._email_from_token(token) == ("emp@example.com", "user-1")
+    assert auth._email_from_token(token) == ("emp@example.com", "user-1", None)
+
+
+def test_google_name_comes_from_token(monkeypatch):
+    private = ec.generate_private_key(ec.SECP256R1())
+    token = jwt.encode({**_claims(), "user_metadata": {"full_name": "Bhajan Singh"}}, private, algorithm="ES256")
+
+    class FakeJwks:
+        def get_signing_key_from_jwt(self, _):
+            return type("K", (), {"key": private.public_key()})()
+
+    monkeypatch.setattr(auth, "_jwks_client", lambda: FakeJwks())
+    assert auth._email_from_token(token)[2] == "Bhajan Singh"
+
+
+def test_placeholder_names():
+    assert auth._is_placeholder_name("Owner", "a@x.com")
+    assert auth._is_placeholder_name("bhajanpreets", "bhajanpreets@gmail.com")
+    assert not auth._is_placeholder_name("Jordan Ramos", "employee1@example.com")
 
 
 def test_shared_secret_token_is_accepted(monkeypatch):
