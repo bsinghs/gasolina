@@ -97,8 +97,9 @@ def test_app_admin(client):
     store = client.post("/api/stores", json={"name": "Admin-made store"}, headers=admin)
     assert store.status_code == 200
 
-    people = client.get("/api/people", headers=OWNER).json()
-    row = next(p for p in people if p["email"] == "admin@example.com")
+    # hidden from the owner's People list, visible to admins
+    assert all(p["email"] != "admin@example.com" for p in client.get("/api/people", headers=OWNER).json())
+    row = next(p for p in client.get("/api/people", headers=admin).json() if p["email"] == "admin@example.com")
     assert row["role"] == "admin"
     change = {"email": "admin@example.com", "name": "x", "role": "employee", "active": False, "store_ids": []}
     assert client.patch(f"/api/people/{row['id']}", json=change, headers=OWNER).status_code == 403

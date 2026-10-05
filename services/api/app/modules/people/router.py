@@ -1,5 +1,5 @@
 """People (the invite list). Owner only. Adding someone here is what lets them sign in.
-App admins (role 'admin', from ADMIN_EMAILS) are listed but can't be changed here."""
+App admins (role 'admin', from ADMIN_EMAILS) are hidden from owners and can't be changed here."""
 
 from uuid import UUID
 
@@ -22,9 +22,11 @@ PERSON_SELECT = """
 
 
 @router.get("", response_model=list[Person])
-def list_people(_: CurrentUser = Depends(owner_only)):
+def list_people(user: CurrentUser = Depends(owner_only)):
+    # App admins (support) only see each other here; the business owner sees their own team.
+    hide_admins = "" if user.is_admin else " where p.role <> 'admin'"
     with db.transaction() as conn:
-        return db.fetch_all(conn, PERSON_SELECT + " group by p.id order by p.active desc, p.name")
+        return db.fetch_all(conn, PERSON_SELECT + hide_admins + " group by p.id order by p.active desc, p.name")
 
 
 @router.post("", response_model=Person)
