@@ -38,6 +38,15 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 3. **Direct QuickBooks posting**: `services/quickbooks` via Intuit's API instead of CSV
 4. Reminders when a store hasn't submitted; weekly and monthly reports
 
+## Wishlist: quality and training (agreed Oct 4, do later)
+
+1. **Automatic checks on every push** (GitHub Actions): API tests + web build, red/green on each change. $0
+2. **Click tests with Playwright**: employee submits on a phone, owner sends back, fix, approve, export. Runs on every push. $0
+3. **Error alerts** (e.g. Sentry free plan): email when the app errors on someone's phone. $0 tier
+4. **Test copy of the app** (staging): second free Supabase project + Cloud Run service, fake data. ~$0
+5. **Training from the same Playwright scripts**: 60-second phone video + one-page picture guide for employees; owner walkthrough. Re-run to refresh when screens change
+6. Builder + independent reviewer for each new feature (start with taxable / non-taxable)
+
 ## Open questions for the owner
 
 - QuickBooks Online or Desktop? Exact account names?
