@@ -116,7 +116,7 @@ def export_check_paid_outs(date_from: date, date_to: date, user: CurrentUser = D
 def export_raw(date_from: date, date_to: date, user: CurrentUser = Depends(owner_only)):
     """Every worksheet in the range, one row per day, for Excel."""
     columns = [
-        "business_date", "store_name", "status", "fuel_sale", "merch_sale", "sales_tax", "total_sales", "gallons",
+        "business_date", "store_name", "status", "fuel_sale", "merch_sale", "taxable_sale", "nontaxable_sale", "sales_tax", "total_sales", "gallons",
         "credit", "debit", "ebt", "total_non_cash", "cash_paid_out", "expected_cash", "cash_drop", "over_short",
         "submitted_by_name", "employee_note", "review_note",
     ]

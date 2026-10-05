@@ -13,6 +13,8 @@ const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
   ebt: "Food stamp / EBT",
   fuel_sales: "Fuel sales",
   merch_sales: "Merchandise sales",
+  taxable_sales: "Taxable sales",
+  nontaxable_sales: "Non-taxable sales",
   sales_tax: "Sales tax collected",
   over_short: "Cash over/short",
   default_expense: "Default paid-out expense",

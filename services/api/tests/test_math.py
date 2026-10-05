@@ -57,3 +57,21 @@ def test_csv_format():
     assert rows[0] == "Journal No.,Journal Date,Account Name,Debits,Credits,Description,Location"
     assert rows[1].startswith("ROUTE9-20261003,10/03/2026,Undeposited Funds,1790.00,,")
     assert journal_number(_report()) == "ROUTE9-20261003"
+
+
+def test_taxable_and_nontaxable_add_to_total_sales():
+    """Owner's worksheet (Oct 5): Subtotal = fuel + merchandise + taxable + non-taxable + tax."""
+    t = calculate(**EXAMPLE, taxable_sale="210.25", nontaxable_sale="55.00", paid_outs=PAID_OUTS)
+    assert t.total_sales == Decimal("5909.75")  # 5644.50 + 210.25 + 55.00
+    assert t.expected_cash == Decimal("2064.75")
+    assert t.over_short == Decimal("-274.75")
+
+
+def test_journal_entry_credits_taxable_and_nontaxable_and_balances():
+    extra = dict(taxable_sale="210.25", nontaxable_sale="55.00")
+    totals = calculate(**EXAMPLE, **extra, paid_outs=PAID_OUTS)
+    report = _report(**{k: Decimal(v) for k, v in extra.items()}, over_short=totals.over_short)
+    lines = build_lines(report, QbAccounts().model_dump())
+    assert sum(l.debit for l in lines) == sum(l.credit for l in lines) == Decimal("5909.75")
+    assert [l.credit for l in lines if l.account == "Taxable Sales"] == [Decimal("210.25")]
+    assert [l.credit for l in lines if l.account == "Non-Taxable Sales"] == [Decimal("55.00")]

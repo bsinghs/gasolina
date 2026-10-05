@@ -14,11 +14,13 @@ import { formatMoney, formatOverShort, toApiAmount, toCents } from "../lib/money
 import { calculate } from "../lib/reconciliation";
 
 const TWO_COLS = { "--cols": 2 } as CSSProperties;
-const MONEY_FIELDS = ["fuel_sale", "merch_sale", "sales_tax", "credit", "debit", "ebt", "cash_drop"] as const;
+const MONEY_FIELDS = ["fuel_sale", "merch_sale", "taxable_sale", "nontaxable_sale", "sales_tax", "credit", "debit", "ebt", "cash_drop"] as const;
 
 interface Form {
   fuel_sale: string;
   merch_sale: string;
+  taxable_sale: string;
+  nontaxable_sale: string;
   sales_tax: string;
   gallons: string;
   credit: string;
@@ -30,7 +32,7 @@ interface Form {
 }
 
 const EMPTY: Form = {
-  fuel_sale: "", merch_sale: "", sales_tax: "", gallons: "", credit: "", debit: "", ebt: "", cash_drop: "",
+  fuel_sale: "", merch_sale: "", taxable_sale: "", nontaxable_sale: "", sales_tax: "", gallons: "", credit: "", debit: "", ebt: "", cash_drop: "",
   employee_note: "", paid_outs: [],
 };
 
@@ -214,13 +216,17 @@ export function WorksheetPage() {
 
         <section className="section">
           <h2 className="section-title">Sales</h2>
-          <div className="fields">
+          <div className="fields" style={TWO_COLS}>
             {moneyField("fuel_sale", "Fuel Sales")}
             {moneyField("merch_sale", "Merchandise Sales")}
+          </div>
+          <div className="fields fields-next">
+            {moneyField("taxable_sale", "Taxable Amount")}
+            {moneyField("nontaxable_sale", "Non-Taxable Amount")}
             {moneyField("sales_tax", "Tax Collected")}
           </div>
           <div className="calc-box">
-            <span className="calc-label">Total Sales <small>Fuel + Merchandise + Tax</small></span>
+            <span className="calc-label">Total Sales <small>Fuel + Merchandise + Taxable + Non-Taxable + Tax</small></span>
             <span className="calc-value">{formatMoney(totals.totalSales)}</span>
           </div>
         </section>

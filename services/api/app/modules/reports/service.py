@@ -18,7 +18,7 @@ from app.core.errors import bad_request, conflict, forbidden, not_found
 from app.modules.reports import reconciliation
 from app.modules.reports.schemas import ApproveIn, WorksheetIn
 
-NUMBER_FIELDS = ["fuel_sale", "merch_sale", "sales_tax", "gallons", "credit", "debit", "ebt", "cash_drop"]
+NUMBER_FIELDS = ["fuel_sale", "merch_sale", "taxable_sale", "nontaxable_sale", "sales_tax", "gallons", "credit", "debit", "ebt", "cash_drop"]
 
 # Who may edit a worksheet in each status
 EDITABLE_BY_STAFF = {"draft", "returned"}

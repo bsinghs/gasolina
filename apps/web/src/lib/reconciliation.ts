@@ -6,6 +6,8 @@ import { toCents } from "./money";
 export interface WorksheetNumbers {
   fuel_sale: string;
   merch_sale: string;
+  taxable_sale: string;
+  nontaxable_sale: string;
   sales_tax: string;
   credit: string;
   debit: string;
@@ -15,7 +17,8 @@ export interface WorksheetNumbers {
 }
 
 export function calculate(w: WorksheetNumbers) {
-  const totalSales = toCents(w.fuel_sale) + toCents(w.merch_sale) + toCents(w.sales_tax);
+  const totalSales =
+    toCents(w.fuel_sale) + toCents(w.merch_sale) + toCents(w.taxable_sale) + toCents(w.nontaxable_sale) + toCents(w.sales_tax);
   const nonCash = toCents(w.credit) + toCents(w.debit) + toCents(w.ebt);
   const cashPaidOut = w.paid_outs.filter((p) => p.kind === "cash").reduce((sum, p) => sum + toCents(p.amount), 0);
   const expectedCash = totalSales - nonCash - cashPaidOut;

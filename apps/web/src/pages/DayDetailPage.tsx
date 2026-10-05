@@ -101,7 +101,9 @@ export function DayDetailPage() {
           <div className="card-head">Worksheet</div>
           <div className="card-body">
             {line("Fuel sale", formatMoney(toCents(report.fuel_sale)))}
-            {line("Merchant sale", formatMoney(toCents(report.merch_sale)))}
+            {line("Merchandise sale", formatMoney(toCents(report.merch_sale)))}
+            {line("Taxable amount", formatMoney(toCents(report.taxable_sale)))}
+            {line("Non-taxable amount", formatMoney(toCents(report.nontaxable_sale)))}
             {line("Sales tax", formatMoney(toCents(report.sales_tax)))}
             {line("Total sales", formatMoney(toCents(report.total_sales)), true)}
             {line("Gallons", `${report.gallons} gal`)}

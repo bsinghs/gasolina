@@ -47,6 +47,8 @@ export interface WorksheetInput {
   business_date: string;
   fuel_sale: string;
   merch_sale: string;
+  taxable_sale: string;
+  nontaxable_sale: string;
   sales_tax: string;
   gallons: string;
   credit: string;
@@ -112,6 +114,8 @@ export interface QbAccounts {
   ebt: string;
   fuel_sales: string;
   merch_sales: string;
+  taxable_sales: string;
+  nontaxable_sales: string;
   sales_tax: string;
   over_short: string;
   default_expense: string;

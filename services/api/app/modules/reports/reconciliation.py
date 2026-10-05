@@ -1,6 +1,6 @@
 """The worksheet math. Pure functions, no database, so it's easy to read and test.
 
-    Total sales    = fuel + merchandise + sales tax
+    Total sales    = fuel + merchandise + taxable + non-taxable + sales tax
     Non-cash       = credit + debit + EBT
     Cash paid out  = sum of CASH paid-out lines (checks don't leave the drawer)
     Expected cash  = total sales - non-cash - cash paid out
@@ -32,13 +32,17 @@ def calculate(
     fuel_sale,
     merch_sale,
     sales_tax,
+    taxable_sale=0,
+    nontaxable_sale=0,
     credit,
     debit,
     ebt,
     cash_drop,
     paid_outs: Iterable[dict],
 ) -> Totals:
-    total_sales = money(fuel_sale) + money(merch_sale) + money(sales_tax)
+    total_sales = (
+        money(fuel_sale) + money(merch_sale) + money(taxable_sale) + money(nontaxable_sale) + money(sales_tax)
+    )
     total_non_cash = money(credit) + money(debit) + money(ebt)
     cash_paid_out = sum((money(p["amount"]) for p in paid_outs if p["kind"] == "cash"), Decimal("0.00"))
     expected_cash = total_sales - total_non_cash - cash_paid_out
