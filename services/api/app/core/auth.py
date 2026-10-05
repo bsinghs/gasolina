@@ -21,12 +21,18 @@ class CurrentUser:
     id: UUID
     email: str
     name: str
-    role: str  # employee | manager | owner
+    role: str  # employee | manager | owner | admin
     store_ids: list[UUID] = field(default_factory=list)
 
     @property
+    def is_admin(self) -> bool:
+        """The person who runs the app (support)."""
+        return self.role == "admin"
+
+    @property
     def is_owner(self) -> bool:
-        return self.role == "owner"
+        """Has owner powers: the business owner, or an app admin."""
+        return self.role in ("owner", "admin")
 
     def can_access_store(self, store_id: UUID) -> bool:
         return self.is_owner or store_id in self.store_ids
@@ -109,3 +115,18 @@ def bootstrap_owner() -> None:
                on conflict (lower(email)) do nothing""",
             [settings.bootstrap_owner_email, settings.bootstrap_owner_name],
         )
+
+
+def bootstrap_admins() -> None:
+    """Make sure everyone in ADMIN_EMAILS exists, is active and has the admin role."""
+    emails = get_settings().admin_email_list
+    if not emails:
+        return
+    with db.transaction() as conn:
+        for email in emails:
+            db.execute(
+                conn,
+                """insert into people (email, name, role) values (%s, %s, 'admin')
+                   on conflict (lower(email)) do update set role = 'admin', active = true""",
+                [email, email.split("@")[0]],
+            )

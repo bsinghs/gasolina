@@ -1,6 +1,9 @@
 // Shapes returned by the API. Money comes back as strings like "1234.50" to avoid rounding errors.
 
-export type Role = "employee" | "manager" | "owner";
+export type Role = "employee" | "manager" | "owner" | "admin";
+
+/** Owner powers: the business owner, or the app admin (support). */
+export const hasOwnerAccess = (role: Role | string | undefined) => role === "owner" || role === "admin";
 export type Status = "draft" | "submitted" | "returned" | "approved" | "exported";
 export type PaidOutKind = "cash" | "check";
 

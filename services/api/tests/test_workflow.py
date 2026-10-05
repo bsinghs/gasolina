@@ -15,7 +15,7 @@ OTHER = {"X-Dev-Email": "other@example.com"}
 
 @pytest.fixture(scope="module")
 def client():
-    os.environ.update(DATABASE_URL=TEST_DB, AUTH_MODE="dev", BOOTSTRAP_OWNER_EMAIL="owner@example.com")
+    os.environ.update(DATABASE_URL=TEST_DB, AUTH_MODE="dev", BOOTSTRAP_OWNER_EMAIL="owner@example.com", ADMIN_EMAILS="admin@example.com")
     import psycopg
 
     with psycopg.connect(TEST_DB, autocommit=True) as conn:
@@ -84,3 +84,24 @@ def test_full_day(client):
 
     history = [h["action"] for h in client.get(f"/api/reports/{rid}", headers=OWNER).json()["history"]]
     assert history[0] == "exported" and "returned" in history
+
+
+def test_app_admin(client):
+    """ADMIN_EMAILS people get owner powers, show on People as admin, and the owner can't change them."""
+    from app.core.auth import bootstrap_admins
+
+    bootstrap_admins()  # the fixture sets ADMIN_EMAILS=admin@example.com
+    admin = {"X-Dev-Email": "admin@example.com"}
+    assert client.get("/api/me", headers=admin).json()["role"] == "admin"
+    assert client.get("/api/settings", headers=admin).status_code == 200  # owner-only page
+    store = client.post("/api/stores", json={"name": "Admin-made store"}, headers=admin)
+    assert store.status_code == 200
+
+    people = client.get("/api/people", headers=OWNER).json()
+    row = next(p for p in people if p["email"] == "admin@example.com")
+    assert row["role"] == "admin"
+    change = {"email": "admin@example.com", "name": "x", "role": "employee", "active": False, "store_ids": []}
+    assert client.patch(f"/api/people/{row['id']}", json=change, headers=OWNER).status_code == 403
+    # and the owner can't hand out the admin role
+    bad = {"email": "new@example.com", "name": "N", "role": "admin", "store_ids": []}
+    assert client.post("/api/people", json=bad, headers=OWNER).status_code == 422

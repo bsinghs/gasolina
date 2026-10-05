@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import type { PaidOut, Report } from "../api/types";
+import { hasOwnerAccess, type PaidOut, type Report } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
 import { PaidOutLines } from "../components/PaidOutLines";
@@ -62,7 +62,7 @@ export function WorksheetPage() {
   const [confirmOver, setConfirmOver] = useState(false);
   const saveTimer = useRef<number>();
 
-  const isOwner = me?.role === "owner";
+  const isOwner = hasOwnerAccess(me?.role);
   const status = report?.status ?? "draft";
   const editable = status === "draft" || status === "returned" || (isOwner && status === "submitted");
   const totals = calculate(form);

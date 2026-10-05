@@ -13,7 +13,7 @@ REGION="${REGION:-us-east4}"            # Northern Virginia, next to the Supabas
 SERVICE="gasolina-api"
 REPO="gasolina"
 SUPABASE_URL="https://uhwhfrwpuysestjdqawz.supabase.co"
-OWNER_EMAIL="bhajanpreets@gmail.com"
+ADMIN_EMAILS="${ADMIN_EMAILS:-bhajanpreets@gmail.com}"   # app admin (support); the business owner is added in the app
 CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:5173,https://shift-close.pages.dev}"   
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
@@ -74,7 +74,7 @@ ENV_FILE=$(mktemp)
 cat > "$ENV_FILE" <<ENVEOF
 AUTH_MODE: "supabase"
 SUPABASE_URL: "${SUPABASE_URL}"
-BOOTSTRAP_OWNER_EMAIL: "${OWNER_EMAIL}"
+ADMIN_EMAILS: "${ADMIN_EMAILS}"
 CORS_ORIGINS: "${CORS_ORIGINS}"
 ENVEOF
 gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" \

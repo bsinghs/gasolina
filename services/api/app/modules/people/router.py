@@ -1,4 +1,5 @@
-"""People (the invite list). Owner only. Adding someone here is what lets them sign in."""
+"""People (the invite list). Owner only. Adding someone here is what lets them sign in.
+App admins (role 'admin', from ADMIN_EMAILS) are listed but can't be changed here."""
 
 from uuid import UUID
 
@@ -8,7 +9,7 @@ from psycopg.errors import UniqueViolation
 
 from app.core import db
 from app.core.auth import CurrentUser, owner_only
-from app.core.errors import bad_request, conflict, not_found
+from app.core.errors import bad_request, conflict, forbidden, not_found
 from app.modules.people.schemas import Person, PersonIn
 
 router = APIRouter(prefix="/people", tags=["people"])
@@ -46,6 +47,9 @@ def update_person(person_id: UUID, data: PersonIn, user: CurrentUser = Depends(o
     if person_id == user.id and (data.role != "owner" or not data.active):
         raise bad_request("You can't remove your own owner access")
     with db.transaction() as conn:
+        target = db.fetch_one(conn, "select role from people where id = %s", [person_id])
+        if target and target["role"] == "admin":
+            raise forbidden("The app admin can't be changed here")
         row = db.fetch_one(
             conn,
             "update people set email = %s, name = %s, role = %s, active = %s where id = %s returning id",

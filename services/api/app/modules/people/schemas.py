@@ -3,7 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
-Role = Literal["employee", "manager", "owner"]
+Role = Literal["employee", "manager", "owner"]  # what the owner can give someone
+ListedRole = Literal["employee", "manager", "owner", "admin"]  # admin comes from ADMIN_EMAILS only
 
 
 class PersonIn(BaseModel):
@@ -18,7 +19,7 @@ class Person(BaseModel):
     id: UUID
     email: str
     name: str
-    role: Role
+    role: ListedRole
     active: bool
     store_ids: list[UUID]
     has_signed_in: bool

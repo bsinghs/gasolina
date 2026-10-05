@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { hasOwnerAccess } from "./api/types";
 import { useAuth } from "./auth/AuthProvider";
 import { Layout } from "./components/Layout";
 import { Notice } from "./components/Notice";
@@ -16,7 +17,7 @@ import { WorksheetPage } from "./pages/WorksheetPage";
 
 function OwnerOnly({ children }: { children: ReactNode }) {
   const { me } = useAuth();
-  return me?.role === "owner" ? <>{children}</> : <Navigate to="/worksheet" replace />;
+  return hasOwnerAccess(me?.role) ? <>{children}</> : <Navigate to="/worksheet" replace />;
 }
 
 export function App() {
@@ -27,7 +28,7 @@ export function App() {
   if (status === "not_invited") return <NotInvitedPage />;
   if (status === "error") return <main className="page"><Notice kind="error">{error}</Notice></main>;
 
-  const home = me?.role === "owner" ? "/review" : "/worksheet";
+  const home = hasOwnerAccess(me?.role) ? "/review" : "/worksheet";
   return (
     <Routes>
       <Route element={<Layout />}>

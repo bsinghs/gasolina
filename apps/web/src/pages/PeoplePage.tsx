@@ -6,6 +6,7 @@ import type { Person, Role, Store } from "../api/types";
 import { Notice } from "../components/Notice";
 
 type Draft = Omit<Person, "id" | "has_signed_in">;
+const ROLE_LABEL: Record<Role, string> = { employee: "Employee", manager: "Manager", owner: "Owner", admin: "App admin (support)" };
 const BLANK: Draft = { email: "", name: "", role: "employee", active: true, store_ids: [] };
 
 export function PeoplePage() {
@@ -89,10 +90,12 @@ export function PeoplePage() {
               <tr key={p.id} style={p.active ? undefined : { opacity: 0.5 }}>
                 <td className="left">{p.name}</td>
                 <td className="left">{p.email}</td>
-                <td className="left">{p.role}</td>
-                <td className="left">{p.role === "owner" ? "All" : p.store_ids.map(storeName).join(", ") || "—"}</td>
+                <td className="left">{ROLE_LABEL[p.role] ?? p.role}</td>
+                <td className="left">{p.role === "owner" || p.role === "admin" ? "All" : p.store_ids.map(storeName).join(", ") || "—"}</td>
                 <td>{!p.active ? "Deactivated" : p.has_signed_in ? "Active" : "Invited"}</td>
-                <td><button className="link-btn" onClick={() => startEdit(p)}>Edit</button></td>
+                <td>{p.role === "admin"
+                  ? <span className="muted" title="Runs the app and helps with support. Set up by the app, not on this page.">Managed by app</span>
+                  : <button className="link-btn" onClick={() => startEdit(p)}>Edit</button>}</td>
               </tr>
             ))}
           </tbody>

@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import db
-from app.core.auth import bootstrap_owner
+from app.core.auth import bootstrap_admins, bootstrap_owner
 from app.core.config import get_settings
 from app.modules.exports.router import router as exports_router
 from app.modules.me.router import router as me_router
@@ -24,6 +24,7 @@ from app.modules.stores.router import router as stores_router
 async def lifespan(_: FastAPI):
     db.open_pool()
     bootstrap_owner()
+    bootstrap_admins()
     yield
     db.close_pool()
 

@@ -1,9 +1,10 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { hasOwnerAccess } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 
 export function Layout() {
   const { me, signOut } = useAuth();
-  const isOwner = me?.role === "owner";
+  const isOwner = hasOwnerAccess(me?.role);
   const link = ({ isActive }: { isActive: boolean }) => (isActive ? "active" : "");
 
   return (
@@ -19,7 +20,7 @@ export function Layout() {
           {isOwner && <NavLink to="/settings" className={link}>Settings</NavLink>}
         </nav>
         <div className="who">
-          <span>{me?.name}</span>
+          <span>{me?.name}{me?.role === "admin" ? " · Admin" : ""}</span>
           <button className="btn btn-ghost" style={{ minHeight: 36, fontSize: 12 }} onClick={signOut}>Sign out</button>
         </div>
       </header>

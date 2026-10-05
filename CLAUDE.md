@@ -33,7 +33,7 @@ Makefile               make demo · make live · make test · make stop · make 
 1. **Screens never touch the database.** Browser → API → Postgres. The web app has no database credentials.
 2. **Money is `Decimal`**, rounded with `reconciliation.money()`. Never `float`. Columns are `numeric(12,2)`.
 3. **The API decides everything**: totals, over/short, who can see/do what. The web app only displays. Worksheet math lives in `services/api/app/modules/reports/reconciliation.py` (pure functions, tested).
-4. **Every permission check happens in the API**, using `current_user` / `owner_only` from `app/core/auth.py`. Employees only see their own stores.
+4. **Every permission check happens in the API**, using `current_user` / `owner_only` from `app/core/auth.py`. Employees only see their own stores. Roles: `employee`, `manager`, `owner`, `admin` (app support, from `ADMIN_EMAILS`; owner powers, not editable by the owner). Use `user.is_owner` / `hasOwnerAccess()` for "has owner powers".
 5. **Database changes = a new migration file** (`database/migrations/00N_name.sql`). Never edit an applied migration. Tables stay locked (RLS on, no policies); see 002.
 6. **No secrets in git.** Secrets live in Google Secret Manager / host env vars. `Temp_DOCS/` is personal and gitignored: never commit it, never copy its contents into tracked files.
 7. **AI fills drafts; people confirm.** Anything an AI reads goes into a draft and is marked in `field_sources` (`typed` / `ai` / `ai_corrected`). Code, not AI, checks the numbers add up.
@@ -50,7 +50,7 @@ Makefile               make demo · make live · make test · make stop · make 
 
 ## Environment
 
-- API settings (env vars, see `services/api/app/core/config.py`): `DATABASE_URL`, `AUTH_MODE` (`supabase` | `dev`), `SUPABASE_URL`, `BOOTSTRAP_OWNER_EMAIL`, `CORS_ORIGINS`.
+- API settings (env vars, see `services/api/app/core/config.py`): `DATABASE_URL`, `AUTH_MODE` (`supabase` | `dev`), `SUPABASE_URL`, `BOOTSTRAP_OWNER_EMAIL` (demo/first owner), `ADMIN_EMAILS` (app admins), `CORS_ORIGINS`.
 - Web settings: `apps/web/.env.demo`, `.env.live` (`VITE_API_URL`, `VITE_AUTH_MODE`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; all public).
 - Hosts: API on Google Cloud Run (`gasolina-510519`, `us-east4`); database + sign-in on Supabase (`uhwhfrwpuysestjdqawz`, us-east-1); screens to Cloudflare Pages (next). Trial budget is **$0/month**: flag anything that costs money.
 - `AUTH_MODE=dev` trusts an `X-Dev-Email` header. **Only** for local demo; never on a public host.

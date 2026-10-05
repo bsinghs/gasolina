@@ -24,8 +24,16 @@ class Settings(BaseSettings):
     bootstrap_owner_email: str = ""
     bootstrap_owner_name: str = "Owner"
 
+    # App admins (the people who run the app, e.g. support). Comma-separated emails. They get every
+    # owner power, are listed separately on the People page, and the owner can't change them.
+    admin_emails: str = ""
+
     # Comma-separated list of web app origins allowed to call the API
     cors_origins: str = "http://localhost:5173"
+
+    @property
+    def admin_email_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.admin_emails.split(",") if e.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:
