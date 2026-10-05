@@ -1,23 +1,41 @@
-# Roadmap: Shift Close and QuickBooks
+# Roadmap: replacing QuickBooks, step by step
 
-_Agreed direction, Oct 4, 2026_
+_Updated Oct 4, 2026: the owner pays Intuit about **$30/month per store** and wants to stop, using our own database instead._
 
-**Goal:** over time, bring most of the owner's day-to-day QuickBooks work into this app, **without rebuilding QuickBooks**.
+**Goal:** Shift Close becomes the station's books for day-to-day work, so QuickBooks can be cancelled. **Not** a full accounting product: only what this business uses, and anything tax-critical checked by his accountant before we switch.
 
-**Principle:** Shift Close is the gas station's **front office**; QuickBooks stays **the books** (the single source of truth for accounting). We add what a station does daily that QuickBooks is clumsy at, and push the results into QuickBooks automatically. We never keep a second set of accounts that can disagree.
+## What QuickBooks does today → where it goes
 
-| Phase | Add to Shift Close | QuickBooks link |
+| Need | In Shift Close | Status |
 | --- | --- | --- |
-| **Now** | Daily worksheet + approval · monthly reports · AI photo scan of the register report | Journal-entry CSV import |
-| **Next** | **Direct posting** (no CSV); pick accounts/vendors/locations pulled from QuickBooks | Intuit QuickBooks Online API (OAuth, two-way) |
-| **Then** | Fuel deliveries + tank levels · vendor bills (photo → AI reads → owner approves) · lottery / scratch-off counts · bank deposit tracking | Bills, deposits, journal entries posted to QuickBooks |
-| **Later** | Owner dashboard across stores · alerts (short days, missing closes, low tanks) · employee hours | Payroll stays in QuickBooks / payroll provider |
-| **Leave to QuickBooks** | Taxes, payroll, bank reconciliation, financial statements, accountant's work | |
+| Daily sales, cards, cash, over/short | Daily worksheet + approval | ✅ Live |
+| Paid-outs per day | Worksheet paid-outs (cash / check) | ✅ Live |
+| Monthly totals per store / all stores | Monthly reports | Spec: [features/monthly-reports.md](features/monthly-reports.md) |
+| Expenses / vendor bills | Bills: photo → AI reads → owner approves | To spec |
+| **Profit & loss** per store and combined | Simple double-entry ledger behind the scenes (every approved day / bill posts balanced entries; we already build these for the QuickBooks CSV) | To spec |
+| Sales tax report | From tax collected per day | To spec |
+| Bank deposits | Deposit tracking per store | To spec |
+| **Year-end package for the accountant** | P&L, expense detail, sales-tax summary, general ledger as Excel/PDF | To spec. **Accountant must approve** |
+| Payroll, 1099s | **Not built here.** Keep a cheap payroll service if he uses payroll | Ask |
+| Bank statement matching | Later, maybe | Ask |
 
-**How we keep it simple**
+## How we switch safely
 
-1. One feature at a time: short spec in `docs/features/`, build, independent review, tests.
-2. Only what the owner uses **daily**. Ask him: "Which 3 QuickBooks tasks take you the most time?" Those come first.
-3. Every money number is calculated in the API and posted to QuickBooks; people approve before anything is posted.
+1. **Ask** the owner and his accountant what QuickBooks is used for (questions below).
+2. **Build** the missing pieces, one feature at a time (spec → build → independent review → tests).
+3. **Run both side by side for 1-2 months.** The accountant compares our P&L and sales tax with QuickBooks.
+4. **Export QuickBooks history** (reports + full transaction list), keep it, then cancel.
 
-**Open question for the owner:** QuickBooks **Online** or **Desktop**? (Direct posting needs Online; Desktop would stay on file import.)
+## Questions for the owner / accountant
+
+- Payroll in QuickBooks? Paying vendors / writing checks from it? Matching the bank statement in it?
+- What does the accountant need at year-end: a QuickBooks login or reports?
+- One QuickBooks company per store? (If QuickBooks stays a while: one company with locations may cost less.)
+- Would the accountant accept Excel/PDF reports, or insist on an accounting app? (Middle path: a free accounting app such as Wave just for the year-end package; check current terms.)
+
+## Principles
+
+- Money numbers are calculated in the API, stored exactly, and every entry balances (debits = credits).
+- Nothing is posted to the books without a person approving it.
+- Records are never deleted, only corrected with a new entry (keeps the history the accountant needs).
+- Keep it simple: only what this business uses **weekly**.

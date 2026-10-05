@@ -31,7 +31,7 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 - [ ] Set the QuickBooks account names in Settings to his real chart of accounts
 - [ ] Demo script: employee submits on phone → owner sends back once → approves → export → import into a QuickBooks sandbox
 
-Long-term direction: [ROADMAP.md](ROADMAP.md) (front office for the station; QuickBooks stays the books).
+Long-term direction: [ROADMAP.md](ROADMAP.md): replace QuickBooks (~$30/month per store) step by step, with the accountant's OK.
 
 ## After the demo (in order)
 
