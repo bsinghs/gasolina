@@ -2,7 +2,7 @@
 
     Debits:  cash drop -> Undeposited Funds, credit+debit -> Card Clearing, EBT -> EBT Receivable,
              each cash paid-out -> its expense account, a shortage -> Cash Over/Short
-    Credits: fuel sales, merchandise sales, taxable sales, non-taxable sales, sales tax, an overage -> Cash Over/Short
+    Credits: fuel sales, merchandise sales (taxable / non-taxable in the description), sales tax, an overage -> Cash Over/Short
 
 The over/short line is exactly the gap between the drawer and the sales, so debits always equal credits.
 Check paid-outs are NOT in here: they're paid from the bank, not the drawer.
@@ -49,9 +49,10 @@ def build_lines(report: dict, accounts: dict) -> list[Line]:
         debit(accounts["over_short"], -over_short, "Short")
 
     credit(accounts["fuel_sales"], report["fuel_sale"], f"Fuel {report['gallons']} gal")
-    credit(accounts["merch_sales"], report["merch_sale"], "In-store sales")
-    credit(accounts["taxable_sales"], report.get("taxable_sale"), "Taxable sales")
-    credit(accounts["nontaxable_sales"], report.get("nontaxable_sale"), "Non-taxable sales")
+    split = ""
+    if report.get("taxable_sale") is not None:
+        split = f" (taxable {money(report['taxable_sale'])}, non-taxable {money(report['nontaxable_sale'])})"
+    credit(accounts["merch_sales"], report["merch_sale"], "In-store sales" + split)
     credit(accounts["sales_tax"], report["sales_tax"], "Sales tax collected")
     if over_short > 0:
         credit(accounts["over_short"], over_short, "Over")

@@ -25,6 +25,7 @@ class Me(BaseModel):
     role: str
     stores: list[MyStore]
     over_short_alert: Decimal
+    sales_tax_rate: Decimal
 
 
 @router.get("", response_model=Me)
@@ -36,5 +37,6 @@ def me(user: CurrentUser = Depends(current_user)):
             stores = db.fetch_all(
                 conn, "select id, name from stores where id = any(%s) and active order by name", [user.store_ids]
             )
-        threshold = load_settings(conn).over_short_alert
-    return Me(id=user.id, email=user.email, name=user.name, role=user.role, stores=stores, over_short_alert=threshold)
+        settings = load_settings(conn)
+    return Me(id=user.id, email=user.email, name=user.name, role=user.role, stores=stores,
+              over_short_alert=settings.over_short_alert, sales_tax_rate=settings.sales_tax_rate)

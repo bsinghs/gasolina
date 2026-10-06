@@ -13,8 +13,6 @@ const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
   ebt: "Food stamp / EBT",
   fuel_sales: "Fuel sales",
   merch_sales: "Merchandise sales",
-  taxable_sales: "Taxable sales",
-  nontaxable_sales: "Non-taxable sales",
   sales_tax: "Sales tax collected",
   over_short: "Cash over/short",
   default_expense: "Default paid-out expense",
@@ -26,10 +24,11 @@ export function SettingsPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [taxPct, setTaxPct] = useState("6");
   const [newStore, setNewStore] = useState({ name: "", qb_location: "" });
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
-  const load = () => Promise.all([api.stores.list(), api.settings.get()]).then(([s, st]) => { setStores(s); setSettings(st); });
+  const load = () => Promise.all([api.stores.list(), api.settings.get()]).then(([s, st]) => { setStores(s); setSettings(st); setTaxPct(String(+(parseFloat(st.sales_tax_rate) * 100).toFixed(2))); });
   useEffect(() => { load().catch((e) => setMessage({ kind: "error", text: e.message })); }, []);
 
   const guard = async (fn: () => Promise<unknown>, ok: string) => {
@@ -54,7 +53,8 @@ export function SettingsPage() {
 
   const saveSettings = (e: FormEvent) => {
     e.preventDefault();
-    if (settings) guard(() => api.settings.save(settings), "Settings saved.");
+    const rate = parseFloat(taxPct) / 100;
+    if (settings) guard(() => api.settings.save({ ...settings, sales_tax_rate: rate.toFixed(4) }), "Settings saved.");
   };
 
   return (
@@ -132,6 +132,11 @@ export function SettingsPage() {
                   onChange={(e) => setSettings({ ...settings, qb_accounts: { ...settings.qb_accounts, [key]: e.target.value } })} />
               </div>
             ))}
+            <div className="field-row">
+              <label htmlFor="taxrate">Sales tax rate (splits merchandise into taxable / non-taxable)<span className="unit">%</span></label>
+              <input id="taxrate" className="num" inputMode="decimal" value={taxPct}
+                onChange={(e) => setTaxPct(e.target.value)} />
+            </div>
             <div className="field-row">
               <label htmlFor="threshold">Warn when over/short is more than<span className="unit">$</span></label>
               <input id="threshold" className="num" inputMode="decimal" value={settings.over_short_alert}

@@ -59,19 +59,29 @@ def test_csv_format():
     assert journal_number(_report()) == "ROUTE9-20261003"
 
 
-def test_taxable_and_nontaxable_add_to_total_sales():
-    """Owner's worksheet (Oct 5): Subtotal = fuel + merchandise + taxable + non-taxable + tax."""
-    t = calculate(**EXAMPLE, taxable_sale="210.25", nontaxable_sale="55.00", paid_outs=PAID_OUTS)
-    assert t.total_sales == Decimal("5909.75")  # 5644.50 + 210.25 + 55.00
-    assert t.expected_cash == Decimal("2064.75")
-    assert t.over_short == Decimal("-274.75")
+
+def test_taxable_split_comes_from_sales_tax():
+    """Owner (Oct 5): taxable = PA sales tax / 6%, non-taxable = merchandise - taxable. Totals unchanged."""
+    t = calculate(**EXAMPLE, paid_outs=PAID_OUTS)
+    assert t.taxable_sale == Decimal("1575.00")      # 94.50 / 0.06
+    assert t.nontaxable_sale == Decimal("-225.00")   # 1350.00 - 1575.00: tax too high for the merch, flagged on screen
+    assert t.total_sales == Decimal("5644.50")       # fuel + merch + tax, the split doesn't add to it
+
+    real = calculate(fuel_sale="5960.50", merch_sale="3396.60", sales_tax="71.29", credit=0, debit=0, ebt=0,
+                     cash_drop=0, paid_outs=[])  # TRUTH 9, Oct 1
+    assert (real.taxable_sale, real.nontaxable_sale) == (Decimal("1188.17"), Decimal("2208.43"))
+    assert real.taxable_sale + real.nontaxable_sale == Decimal("3396.60")
 
 
-def test_journal_entry_credits_taxable_and_nontaxable_and_balances():
-    extra = dict(taxable_sale="210.25", nontaxable_sale="55.00")
-    totals = calculate(**EXAMPLE, **extra, paid_outs=PAID_OUTS)
-    report = _report(**{k: Decimal(v) for k, v in extra.items()}, over_short=totals.over_short)
+def test_split_uses_the_rate_from_settings():
+    t = calculate(**EXAMPLE, sales_tax_rate="0.07", paid_outs=PAID_OUTS)  # e.g. Allegheny County
+    assert t.taxable_sale == Decimal("1350.00") and t.nontaxable_sale == Decimal("0.00")
+
+
+def test_journal_entry_shows_split_on_merchandise_line_and_still_balances():
+    totals = calculate(**EXAMPLE, paid_outs=PAID_OUTS)
+    report = _report(taxable_sale=totals.taxable_sale, nontaxable_sale=totals.nontaxable_sale)
     lines = build_lines(report, QbAccounts().model_dump())
-    assert sum(l.debit for l in lines) == sum(l.credit for l in lines) == Decimal("5909.75")
-    assert [l.credit for l in lines if l.account == "Taxable Sales"] == [Decimal("210.25")]
-    assert [l.credit for l in lines if l.account == "Non-Taxable Sales"] == [Decimal("55.00")]
+    assert sum(l.debit for l in lines) == sum(l.credit for l in lines) == Decimal("5644.50")
+    merch = [l for l in lines if l.account == "Merchandise Sales"][0]
+    assert merch.credit == Decimal("1350.00") and "taxable 1575.00" in merch.description

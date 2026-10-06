@@ -14,13 +14,11 @@ import { formatMoney, formatOverShort, toApiAmount, toCents } from "../lib/money
 import { calculate } from "../lib/reconciliation";
 
 const TWO_COLS = { "--cols": 2 } as CSSProperties;
-const MONEY_FIELDS = ["fuel_sale", "merch_sale", "taxable_sale", "nontaxable_sale", "sales_tax", "credit", "debit", "ebt", "cash_drop"] as const;
+const MONEY_FIELDS = ["fuel_sale", "merch_sale", "sales_tax", "credit", "debit", "ebt", "cash_drop"] as const;
 
 interface Form {
   fuel_sale: string;
   merch_sale: string;
-  taxable_sale: string;
-  nontaxable_sale: string;
   sales_tax: string;
   gallons: string;
   credit: string;
@@ -32,7 +30,7 @@ interface Form {
 }
 
 const EMPTY: Form = {
-  fuel_sale: "", merch_sale: "", taxable_sale: "", nontaxable_sale: "", sales_tax: "", gallons: "", credit: "", debit: "", ebt: "", cash_drop: "",
+  fuel_sale: "", merch_sale: "", sales_tax: "", gallons: "", credit: "", debit: "", ebt: "", cash_drop: "",
   employee_note: "", paid_outs: [],
 };
 
@@ -67,7 +65,9 @@ export function WorksheetPage() {
   const isOwner = hasOwnerAccess(me?.role);
   const status = report?.status ?? "draft";
   const editable = status === "draft" || status === "returned" || (isOwner && status === "submitted");
-  const totals = calculate(form);
+  const taxRate = parseFloat(me?.sales_tax_rate ?? "0.06") || 0.06;
+  const taxPct = `${+(taxRate * 100).toFixed(2)}%`;
+  const totals = calculate(form, taxRate);
   const threshold = toCents(me?.over_short_alert ?? "20");
   const unnamedLine = form.paid_outs.some((p) => toCents(p.amount) > 0 && !p.payee.trim());
 
@@ -220,13 +220,26 @@ export function WorksheetPage() {
             {moneyField("fuel_sale", "Fuel Sales")}
             {moneyField("merch_sale", "Merchandise Sales")}
           </div>
-          <div className="fields fields-next">
-            {moneyField("taxable_sale", "Taxable Amount")}
-            {moneyField("nontaxable_sale", "Non-Taxable Amount")}
-            {moneyField("sales_tax", "Tax Collected")}
+          <div className="fields fields-next" style={TWO_COLS}>
+            {moneyField("sales_tax", "PA Sales Tax Collected")}
           </div>
+          <div className="fields fields-next" style={TWO_COLS}>
+            <div className="calc-box calc-box-tight">
+              <span className="calc-label">Taxable Amount <small>Tax ÷ {taxPct}</small></span>
+              <span className="calc-value">{formatMoney(totals.taxable)}</span>
+            </div>
+            <div className={`calc-box calc-box-tight${totals.nonTaxable < 0 ? " danger" : ""}`}>
+              <span className="calc-label">Non-Taxable Amount <small>Merchandise − Taxable</small></span>
+              <span className="calc-value">{formatMoney(totals.nonTaxable)}</span>
+            </div>
+          </div>
+          {totals.nonTaxable < 0 && (
+            <div className="notice notice-warn" style={{ marginTop: 12 }}>
+              The tax is more than {taxPct} of merchandise sales. Check Merchandise Sales and Tax Collected.
+            </div>
+          )}
           <div className="calc-box">
-            <span className="calc-label">Total Sales <small>Fuel + Merchandise + Taxable + Non-Taxable + Tax</small></span>
+            <span className="calc-label">Total Sales <small>Fuel + Merchandise + Tax</small></span>
             <span className="calc-value">{formatMoney(totals.totalSales)}</span>
           </div>
         </section>

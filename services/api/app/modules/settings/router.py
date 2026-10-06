@@ -18,8 +18,6 @@ class QbAccounts(BaseModel):
     ebt: str = "EBT Receivable"
     fuel_sales: str = "Fuel Sales"
     merch_sales: str = "Merchandise Sales"
-    taxable_sales: str = "Taxable Sales"
-    nontaxable_sales: str = "Non-Taxable Sales"
     sales_tax: str = "Sales Tax Payable"
     over_short: str = "Cash Over/Short"
     default_expense: str = "Miscellaneous Expense"
@@ -27,6 +25,9 @@ class QbAccounts(BaseModel):
 
 class AppSettings(BaseModel):
     over_short_alert: Decimal = Field(default=Decimal("20"), ge=0)
+    # Splits merchandise into taxable / non-taxable: taxable = sales tax / rate. PA = 6%
+    # (Allegheny County 7%, Philadelphia 8%).
+    sales_tax_rate: Decimal = Field(default=Decimal("0.06"), gt=0, le=Decimal("0.2"), decimal_places=4)
     qb_accounts: QbAccounts = QbAccounts()
 
 

@@ -11,7 +11,7 @@ _Last updated: Oct 5, 2026_
 | Web app | Sign in, worksheet (autosave, live totals), my days, review queue (with missing days), day detail with journal-entry preview, export, people, settings | Clicked through end to end in a browser, phone and laptop sizes |
 | QuickBooks | Each approved day → one balanced journal entry, CSV in QuickBooks Online import format | Spec's worked example balances at $5,644.50 |
 | Docs | README, architecture with diagrams, deploy checklist | |
-| Worksheet v2: taxable / non-taxable (Oct 5) | Two new sales fields from the owner's newer worksheet. Total sales = Fuel + Merch + Taxable + Non-taxable + Tax. Own QuickBooks credit lines. Migration 004. Spec: [features/worksheet-v2-fields.md](features/worksheet-v2-fields.md) | 24 API tests (new math, journal and save tests); laptop + phone screenshots |
+| Worksheet v2: taxable / non-taxable (Oct 5) | Calculated from the PA sales tax: taxable = tax ÷ rate (Settings, 6%), non-taxable = merchandise − taxable. Total sales = Fuel + Merch + Tax. Migrations 004, 005. Spec: [features/worksheet-v2-fields.md](features/worksheet-v2-fields.md) | 25 API tests (incl. TRUTH 9 Oct 1: $71.29 tax → $1,188.17 / $2,208.43); laptop + phone screenshots |
 
 ## Next: get it live (you)
 

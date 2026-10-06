@@ -14,6 +14,7 @@ export interface Me {
   role: Role;
   stores: { id: string; name: string }[];
   over_short_alert: string;
+  sales_tax_rate: string;
 }
 
 export interface Store {
@@ -47,8 +48,6 @@ export interface WorksheetInput {
   business_date: string;
   fuel_sale: string;
   merch_sale: string;
-  taxable_sale: string;
-  nontaxable_sale: string;
   sales_tax: string;
   gallons: string;
   credit: string;
@@ -68,6 +67,8 @@ export interface HistoryEntry {
 }
 
 export interface Report extends WorksheetInput {
+  taxable_sale: string; // calculated by the API: sales tax / rate
+  nontaxable_sale: string; // calculated: merchandise - taxable
   id: string;
   store_name: string;
   status: Status;
@@ -114,8 +115,6 @@ export interface QbAccounts {
   ebt: string;
   fuel_sales: string;
   merch_sales: string;
-  taxable_sales: string;
-  nontaxable_sales: string;
   sales_tax: string;
   over_short: string;
   default_expense: string;
@@ -123,5 +122,6 @@ export interface QbAccounts {
 
 export interface AppSettings {
   over_short_alert: string;
+  sales_tax_rate: string;
   qb_accounts: QbAccounts;
 }

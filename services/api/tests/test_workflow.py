@@ -55,12 +55,11 @@ def test_full_day(client):
     report = r.json()
     assert report["over_short"] == "-9.50" and report["status"] == "draft"
 
-    # taxable / non-taxable are saved and added to total sales (then put back for the rest of the test)
-    r = client.put("/api/reports", json=worksheet | {"taxable_sale": "10.00", "nontaxable_sale": "5.00"}, headers=EMP)
-    assert r.status_code == 200, r.text
-    assert (r.json()["taxable_sale"], r.json()["nontaxable_sale"], r.json()["total_sales"]) == ("10.00", "5.00", "5659.50")
-    r = client.put("/api/reports", json=worksheet, headers=EMP)
-    assert r.json()["total_sales"] == "5644.50" and r.json()["taxable_sale"] == "0.00"
+    # taxable / non-taxable are worked out from the sales tax (not typed), and don't change total sales
+    assert (report["taxable_sale"], report["nontaxable_sale"], report["total_sales"]) == ("1575.00", "-225.00", "5644.50")
+    r = client.put("/api/reports", json=worksheet | {"taxable_sale": "999.00"}, headers=EMP)  # typed values are ignored
+    assert r.json()["taxable_sale"] == "1575.00"
+    assert client.get("/api/me", headers=EMP).json()["sales_tax_rate"] == "0.06"
 
     # another store's employee can't see or write it
     assert client.get(f"/api/reports/{report['id']}", headers=OTHER).status_code == 403

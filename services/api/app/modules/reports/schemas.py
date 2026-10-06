@@ -31,8 +31,6 @@ class WorksheetIn(BaseModel):
     business_date: date
     fuel_sale: Money = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
     merch_sale: Money = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
-    taxable_sale: Money = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
-    nontaxable_sale: Money = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
     sales_tax: Money = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
     gallons: Decimal = Field(default=Decimal("0"), ge=0, decimal_places=1, max_digits=10)
     credit: Money = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
@@ -69,9 +67,9 @@ class Report(BaseModel):
     status: Status
     fuel_sale: Money
     merch_sale: Money
-    taxable_sale: Money
-    nontaxable_sale: Money
     sales_tax: Money
+    taxable_sale: Money  # calculated: sales tax / rate
+    nontaxable_sale: Money  # calculated: merchandise - taxable
     gallons: Decimal
     credit: Money
     debit: Money

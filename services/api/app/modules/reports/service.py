@@ -17,8 +17,9 @@ from app.core.auth import CurrentUser
 from app.core.errors import bad_request, conflict, forbidden, not_found
 from app.modules.reports import reconciliation
 from app.modules.reports.schemas import ApproveIn, WorksheetIn
+from app.modules.settings.router import load_settings
 
-NUMBER_FIELDS = ["fuel_sale", "merch_sale", "taxable_sale", "nontaxable_sale", "sales_tax", "gallons", "credit", "debit", "ebt", "cash_drop"]
+NUMBER_FIELDS = ["fuel_sale", "merch_sale", "sales_tax", "gallons", "credit", "debit", "ebt", "cash_drop"]
 
 # Who may edit a worksheet in each status
 EDITABLE_BY_STAFF = {"draft", "returned"}
@@ -114,7 +115,10 @@ def save_worksheet(conn: Connection, user: CurrentUser, data: WorksheetIn) -> UU
         raise bad_request("This store is not active")
 
     paid_outs = [p.model_dump() for p in data.paid_outs]
-    totals = reconciliation.calculate(**{k: getattr(data, k) for k in NUMBER_FIELDS if k != "gallons"}, paid_outs=paid_outs)
+    rate = load_settings(conn).sales_tax_rate
+    totals = reconciliation.calculate(
+        **{k: getattr(data, k) for k in NUMBER_FIELDS if k != "gallons"}, sales_tax_rate=rate, paid_outs=paid_outs
+    )
     values = {k: getattr(data, k) for k in NUMBER_FIELDS} | totals.__dict__ | {
         "employee_note": data.employee_note,
         "field_sources": json.dumps(data.field_sources),
