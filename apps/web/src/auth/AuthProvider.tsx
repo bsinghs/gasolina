@@ -35,13 +35,33 @@ function writeDevEmail(email: string | null) {
 
 let devEmail: string | null = readDevEmail();
 
+// App admin's "View as": which person to look at the app as (read-only). Per browser tab.
+const VIEW_AS_KEY = "gasolina.viewAs";
+let viewAsId: string | null = (() => {
+  try {
+    return sessionStorage.getItem(VIEW_AS_KEY);
+  } catch {
+    return null;
+  }
+})();
+function writeViewAs(id: string | null) {
+  viewAsId = id;
+  try {
+    if (id) sessionStorage.setItem(VIEW_AS_KEY, id);
+    else sessionStorage.removeItem(VIEW_AS_KEY);
+  } catch {
+    /* storage blocked: lasts until reload */
+  }
+}
+const viewAsHeader = (): Record<string, string> => (viewAsId ? { "X-View-As": viewAsId } : {});
+
 setAuthHeaderSource(async (): Promise<Record<string, string>> => {
   if (supabase) {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    return token ? { Authorization: `Bearer ${token}`, ...viewAsHeader() } : {};
   }
-  return devEmail ? { "X-Dev-Email": devEmail } : {};
+  return devEmail ? { "X-Dev-Email": devEmail, ...viewAsHeader() } : {};
 });
 
 type Status = "loading" | "signed_out" | "not_invited" | "signed_in" | "error";
@@ -55,6 +75,8 @@ interface AuthValue {
   devSignIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   refresh: () => Promise<void>;
+  /** App admin only: look at the app as this person (read-only); null = back to yourself */
+  viewAs: (personId: string | null) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -64,11 +86,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (): Promise<void> => {
     try {
       setMe(await api.me());
       setStatus("signed_in");
     } catch (e) {
+      if (viewAsId && e instanceof ApiError && (e.status === 403 || e.status === 404)) {
+        writeViewAs(null); // that person was removed, or you're no longer admin: back to yourself
+        return refresh();
+      }
       setMe(null);
       if (e instanceof ApiError && e.status === 403) setStatus("not_invited");
       else if (e instanceof ApiError && e.status === 401) setStatus("signed_out");
@@ -116,7 +142,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus("loading");
       await refresh();
     },
+    viewAs: async (personId) => {
+      writeViewAs(personId);
+      await refresh();
+    },
     signOut: async () => {
+      writeViewAs(null);
       if (supabase) await supabase.auth.signOut();
       devEmail = null;
       writeDevEmail(null);

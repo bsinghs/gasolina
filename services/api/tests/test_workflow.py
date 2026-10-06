@@ -114,6 +114,28 @@ def test_app_admin(client):
     assert client.post("/api/people", json=bad, headers=OWNER).status_code == 422
 
 
+
+def test_admin_view_as_is_read_only_and_admin_only(client):
+    """The app admin can see the app as any person; nothing can be changed while viewing; nobody else can do it."""
+    admin = {"X-Dev-Email": "admin@example.com"}
+    me = client.get("/api/me", headers=admin).json()
+    emp = next(o for o in me["view_as_options"] if o["name"] == "Jo")
+    assert all(o["role"] != "admin" for o in me["view_as_options"])
+
+    as_emp = admin | {"X-View-As": emp["id"]}
+    seen = client.get("/api/me", headers=as_emp).json()
+    assert (seen["role"], seen["name"], seen["viewed_by_name"]) == ("employee", "Jo", me["name"])
+    assert [s["name"] for s in seen["stores"]] == ["Route 9"]           # only the employee's store
+    assert seen["view_as_options"]                                     # admin can still switch
+    assert client.get("/api/settings", headers=as_emp).status_code == 403  # employee can't open owner pages
+    r = client.post("/api/stores", json={"name": "Sneaky"}, headers=as_emp)
+    assert r.status_code == 403 and "read-only" in r.json()["detail"]
+
+    # nobody else gets view-as, and the owner doesn't see the option at all
+    assert client.get("/api/me", headers=OWNER | {"X-View-As": emp["id"]}).status_code == 403
+    assert client.get("/api/me", headers=OWNER).json()["view_as_options"] is None
+    assert client.get("/api/me", headers=EMP).json()["view_as_options"] is None
+
 def test_employee_needs_a_store(client):
     no_store = {"email": "nostore@example.com", "role": "employee", "store_ids": []}
     r = client.post("/api/people", json=no_store, headers=OWNER)

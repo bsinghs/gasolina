@@ -64,7 +64,7 @@ export function WorksheetPage() {
 
   const isOwner = hasOwnerAccess(me?.role);
   const status = report?.status ?? "draft";
-  const editable = status === "draft" || status === "returned" || (isOwner && status === "submitted");
+  const editable = !me?.viewed_by_name && (status === "draft" || status === "returned" || (isOwner && status === "submitted"));
   const taxRate = parseFloat(me?.sales_tax_rate ?? "0.06") || 0.06;
   const taxPct = `${+(taxRate * 100).toFixed(2)}%`;
   const totals = calculate(form, taxRate);
@@ -189,7 +189,11 @@ export function WorksheetPage() {
         <Notice kind="error"><strong>Sent back by the owner:</strong> “{report.review_note}” Fix it and submit again.</Notice>
       )}
       {report && !editable && (
-        <Notice kind="info">This day is {status}. It can't be changed{isOwner ? " unless you reopen it from the review screen" : ""}.</Notice>
+        <Notice kind="info">
+          {me.viewed_by_name
+            ? "You're viewing as this person: read-only."
+            : <>This day is {status}. It can't be changed{isOwner ? " unless you reopen it from the review screen" : ""}.</>}
+        </Notice>
       )}
       {error && <Notice kind="error">{error}</Notice>}
       {unnamedLine && <Notice kind="warn">Add who each paid-out was paid to, so it can be saved.</Notice>}

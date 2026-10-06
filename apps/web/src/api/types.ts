@@ -15,6 +15,8 @@ export interface Me {
   stores: { id: string; name: string; tracking_since: string }[];
   over_short_alert: string;
   sales_tax_rate: string;
+  view_as_options?: { id: string; name: string; role: Role }[] | null; // app admin only
+  viewed_by_name?: string | null; // set while the admin is viewing as this person (read-only)
 }
 
 export interface Store {

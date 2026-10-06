@@ -10,7 +10,7 @@ from functools import lru_cache
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 
 from app.core import db
 from app.core.config import get_settings
@@ -23,6 +23,8 @@ class CurrentUser:
     name: str
     role: str  # employee | manager | owner | admin
     store_ids: list[UUID] = field(default_factory=list)
+    # Set when the app admin is looking at the app as this person ("View as", read-only)
+    viewed_by: "CurrentUser | None" = None
 
     @property
     def is_admin(self) -> bool:
@@ -95,10 +97,7 @@ def _load_person(email: str, auth_user_id: str | None, full_name: str | None = N
     )
 
 
-def current_user(
-    authorization: str | None = Header(default=None),
-    x_dev_email: str | None = Header(default=None),
-) -> CurrentUser:
+def _signed_in_user(authorization: str | None, x_dev_email: str | None) -> CurrentUser:
     settings = get_settings()
     if settings.auth_mode == "dev" and x_dev_email:
         return _load_person(x_dev_email, None)
@@ -106,6 +105,48 @@ def current_user(
         raise HTTPException(status_code=401, detail="Please sign in")
     email, sub, full_name = _email_from_token(authorization.split(" ", 1)[1])
     return _load_person(email, sub, full_name)
+
+
+READ_ONLY_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+def _view_as(admin: CurrentUser, person_id: str, method: str) -> CurrentUser:
+    """App admin sees the app exactly as another person does. Read-only, so nothing is ever
+    saved, submitted or approved under someone else's name."""
+    if not admin.is_admin:
+        raise HTTPException(status_code=403, detail="Only the app admin can view as someone else")
+    try:
+        target_id = UUID(person_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Bad person id") from None
+    with db.transaction() as conn:
+        person = db.fetch_one(
+            conn, "select * from people where id = %s and active and role <> 'admin'", [target_id]
+        )
+        if person is None:
+            raise HTTPException(status_code=404, detail="That person isn't active any more")
+        stores = db.fetch_all(conn, "select store_id from store_members where person_id = %s", [target_id])
+    if method.upper() not in READ_ONLY_METHODS:
+        raise HTTPException(
+            status_code=403,
+            detail=f"You're viewing as {person['name']}: read-only. Switch back to yourself to make changes.",
+        )
+    return CurrentUser(
+        id=person["id"], email=person["email"], name=person["name"], role=person["role"],
+        store_ids=[s["store_id"] for s in stores], viewed_by=admin,
+    )
+
+
+def current_user(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    x_dev_email: str | None = Header(default=None),
+    x_view_as: str | None = Header(default=None),
+) -> CurrentUser:
+    user = _signed_in_user(authorization, x_dev_email)
+    if x_view_as:
+        return _view_as(user, x_view_as, request.method)
+    return user
 
 
 def owner_only(user: CurrentUser = Depends(current_user)) -> CurrentUser:

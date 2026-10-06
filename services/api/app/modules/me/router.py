@@ -22,6 +22,12 @@ class MyStore(BaseModel):
     tracking_since: date
 
 
+class ViewAsOption(BaseModel):
+    id: UUID
+    name: str
+    role: str
+
+
 class Me(BaseModel):
     id: UUID
     email: str
@@ -30,6 +36,9 @@ class Me(BaseModel):
     stores: list[MyStore]
     over_short_alert: Decimal
     sales_tax_rate: Decimal
+    # Only for the app admin: who they can "view as", and who is really signed in while viewing
+    view_as_options: list[ViewAsOption] | None = None
+    viewed_by_name: str | None = None
 
 
 @router.get("", response_model=Me)
@@ -45,5 +54,14 @@ def me(user: CurrentUser = Depends(current_user)):
         else:
             stores = db.fetch_all(conn, select + " and s.id = any(%s) order by s.name", [user.store_ids])
         settings = load_settings(conn)
+        admin = user.viewed_by or (user if user.is_admin else None)
+        options = None
+        if admin is not None:
+            options = db.fetch_all(
+                conn,
+                """select id, name, role from people where active and role <> 'admin'
+                   order by case role when 'owner' then 0 when 'manager' then 1 else 2 end, name""",
+            )
     return Me(id=user.id, email=user.email, name=user.name, role=user.role, stores=stores,
-              over_short_alert=settings.over_short_alert, sales_tax_rate=settings.sales_tax_rate)
+              over_short_alert=settings.over_short_alert, sales_tax_rate=settings.sales_tax_rate,
+              view_as_options=options, viewed_by_name=user.viewed_by.name if user.viewed_by else None)

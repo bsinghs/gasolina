@@ -12,6 +12,7 @@ _Last updated: Oct 5, 2026_
 | QuickBooks | Each approved day → one balanced journal entry, CSV in QuickBooks Online import format | Spec's worked example balances at $5,644.50 |
 | Docs | README, architecture with diagrams, deploy checklist | |
 | Worksheet v2: taxable / non-taxable (Oct 5) | Calculated from the PA sales tax: taxable = tax ÷ rate (Settings, 6%), non-taxable = merchandise − taxable. Total sales = Fuel + Merch + Tax. Migrations 004, 005. Spec: [features/worksheet-v2-fields.md](features/worksheet-v2-fields.md) | 25 API tests (incl. TRUTH 9 Oct 1: $71.29 tax → $1,188.17 / $2,208.43); laptop + phone screenshots |
+| Review queue v2 + admin View as (Oct 5) | Count boxes are filters; missing days grouped per store (date chips open the worksheet), follow From/To, past days only, from the store's start. App admin can **View as** any owner/manager/employee from the header: read-only, blue banner, hidden from everyone else | 26 API tests (view-as read-only + admin-only); browser click-through |
 
 ## Next: get it live (you)
 
