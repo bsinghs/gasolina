@@ -31,13 +31,21 @@ export function ReviewPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Filters can change faster than the answers come back: only the latest answer counts,
+    // and a successful load clears an earlier error.
+    let current = true;
     const base = { store_id: storeId || undefined, date_from: dateFrom, date_to: dateTo };
     Promise.all([api.reports.list({ ...base, status: status || undefined }), api.reports.list(base)])
       .then(([filtered, everything]) => {
+        if (!current) return;
         setRows(filtered);
         setAll(everything);
+        setError(null);
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => current && setError(e.message));
+    return () => {
+      current = false;
+    };
   }, [storeId, status, dateFrom, dateTo]);
 
   // Days in the last week (up to yesterday) where a store has no worksheet at all

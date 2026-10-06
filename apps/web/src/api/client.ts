@@ -18,12 +18,32 @@ export class ApiError extends Error {
   }
 }
 
+const OFFLINE_MESSAGE = "Couldn't reach the server. Check your internet connection and try again.";
+
+// fetch() itself fails (TypeError "Failed to fetch" / "Load failed") when the request never got an answer:
+// a wifi/cell blip, the phone waking up, a browser extension. Reads are retried once; saves are not
+// retried automatically, so nothing is ever sent twice.
+async function send(path: string, options: { method?: string; body?: unknown }): Promise<Response> {
+  const method = options.method ?? "GET";
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(BASE + path, {
+        method,
+        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      });
+    } catch (err) {
+      if (method === "GET" && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 800));
+        continue;
+      }
+      throw new ApiError(0, err instanceof TypeError ? OFFLINE_MESSAGE : String(err));
+    }
+  }
+}
+
 async function request<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
-  const res = await fetch(BASE + path, {
-    method: options.method ?? "GET",
-    headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  const res = await send(path, options);
   if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   return (await res.json()) as T;
 }
@@ -41,11 +61,7 @@ async function errorMessage(res: Response): Promise<string> {
 
 // Downloads a CSV from the API and saves it with the file name the server suggests.
 async function download(path: string, options: { method?: string; body?: unknown } = {}) {
-  const res = await fetch(BASE + path, {
-    method: options.method ?? "GET",
-    headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  const res = await send(path, options);
   if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   const name = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") ?? "")?.[1] ?? "export.csv";
   const url = URL.createObjectURL(await res.blob());
