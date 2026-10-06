@@ -1,4 +1,6 @@
-// Owner's review queue: every store x day, with missing days highlighted.
+// Owner's review queue. The boxes on top are counts AND filters: click one to see those days.
+// "Missing" = a past day (not today) in the date range where a store has no worksheet at all,
+// counted only from the day the store was added (or its first worksheet).
 
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,13 +12,16 @@ import { StatusChip } from "../components/StatusChip";
 import { dateRange, daysAgo, prettyDate, today } from "../lib/dates";
 import { formatMoney, formatOverShort, toCents } from "../lib/money";
 
+const MISSING = "missing";
+
 const STATUS_FILTERS: { value: string; label: string }[] = [
   { value: "submitted", label: "Needs review" },
-  { value: "", label: "All" },
-  { value: "draft", label: "Drafts" },
+  { value: "approved", label: "Approved, not exported" },
+  { value: MISSING, label: "Missing days" },
   { value: "returned", label: "Sent back" },
-  { value: "approved", label: "Approved" },
+  { value: "draft", label: "Drafts (not submitted)" },
   { value: "exported", label: "Exported" },
+  { value: "", label: "All worksheets" },
 ];
 
 export function ReviewPage() {
@@ -26,19 +31,15 @@ export function ReviewPage() {
   const [status, setStatus] = useState("submitted");
   const [dateFrom, setDateFrom] = useState(daysAgo(13));
   const [dateTo, setDateTo] = useState(today());
-  const [rows, setRows] = useState<ReportSummary[]>([]);
   const [all, setAll] = useState<ReportSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // One request for the whole range; the boxes and the table filter it on screen.
   useEffect(() => {
-    // Filters can change faster than the answers come back: only the latest answer counts,
-    // and a successful load clears an earlier error.
     let current = true;
-    const base = { store_id: storeId || undefined, date_from: dateFrom, date_to: dateTo };
-    Promise.all([api.reports.list({ ...base, status: status || undefined }), api.reports.list(base)])
-      .then(([filtered, everything]) => {
+    api.reports.list({ store_id: storeId || undefined, date_from: dateFrom, date_to: dateTo })
+      .then((everything) => {
         if (!current) return;
-        setRows(filtered);
         setAll(everything);
         setError(null);
       })
@@ -46,29 +47,48 @@ export function ReviewPage() {
     return () => {
       current = false;
     };
-  }, [storeId, status, dateFrom, dateTo]);
+  }, [storeId, dateFrom, dateTo]);
 
-  // Days in the last week (up to yesterday) where a store has no worksheet at all
-  const missing = useMemo(() => {
-    const stores = (me?.stores ?? []).filter((s) => !storeId || s.id === storeId);
+  // Missing days, grouped by store: past days only (today isn't over), never before the store started.
+  const missingByStore = useMemo(() => {
+    const yesterday = daysAgo(1);
     const have = new Set(all.map((r) => `${r.store_id}|${r.business_date}`));
-    const from = dateFrom > daysAgo(7) ? dateFrom : daysAgo(7);
-    const to = dateTo < daysAgo(1) ? dateTo : daysAgo(1);
-    return dateRange(from, to)
-      .reverse()
-      .flatMap((d) => stores.filter((s) => !have.has(`${s.id}|${d}`)).map((s) => ({ date: d, store: s.name })));
+    return (me?.stores ?? [])
+      .filter((s) => !storeId || s.id === storeId)
+      .map((s) => {
+        const since = s.tracking_since ?? dateFrom; // older API: no start date yet
+        const from = dateFrom > since ? dateFrom : since;
+        const to = dateTo < yesterday ? dateTo : yesterday;
+        const dates = from <= to ? dateRange(from, to).reverse().filter((d) => !have.has(`${s.id}|${d}`)) : [];
+        return { store: s, dates };
+      })
+      .filter((g) => g.dates.length > 0);
   }, [all, me, storeId, dateFrom, dateTo]);
 
+  const missingCount = missingByStore.reduce((n, g) => n + g.dates.length, 0);
   const waiting = all.filter((r) => r.status === "submitted").length;
   const unexported = all.filter((r) => r.status === "approved").length;
+  const sentBack = all.filter((r) => r.status === "returned").length;
   const netOverShort = all.filter((r) => r.status !== "draft").reduce((s, r) => s + toCents(r.over_short), 0);
+  const rows = status === MISSING ? [] : all.filter((r) => !status || r.status === status);
+
+  const tile = (value: string, label: string, count: number, hint: string) => (
+    <button type="button" className={`stat stat-btn${status === value ? " active" : ""}${count > 0 && value !== "approved" ? " attention" : ""}`}
+      onClick={() => setStatus(value)} aria-pressed={status === value}>
+      <div className="muted">{label}</div>
+      <div className="v">{count}</div>
+      <div className="stat-hint">{hint}</div>
+    </button>
+  );
+
+  const currentLabel = STATUS_FILTERS.find((f) => f.value === status)?.label ?? "";
 
   return (
     <main className="page stack">
       <div className="page-head">
         <div>
           <h1>Review queue</h1>
-          <div className="muted">{waiting} waiting · {missing.length} missing day{missing.length === 1 ? "" : "s"} in the last week</div>
+          <div className="muted">{prettyDate(dateFrom)} – {prettyDate(dateTo)} · click a box to filter</div>
         </div>
         <div className="row-wrap">
           <label className="label-stack">Store
@@ -77,62 +97,85 @@ export function ReviewPage() {
               {me?.stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </label>
-          <label className="label-stack">Status
+          <label className="label-stack">Show
             <select value={status} onChange={(e) => setStatus(e.target.value)}>
               {STATUS_FILTERS.map((f) => <option key={f.label} value={f.value}>{f.label}</option>)}
             </select>
           </label>
-          <label className="label-stack">From<input type="date" className="text" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} /></label>
-          <label className="label-stack">To<input type="date" className="text" value={dateTo} onChange={(e) => setDateTo(e.target.value)} /></label>
+          <label className="label-stack">From<input type="date" className="text" value={dateFrom} max={dateTo} onChange={(e) => e.target.value && setDateFrom(e.target.value)} /></label>
+          <label className="label-stack">To<input type="date" className="text" value={dateTo} min={dateFrom} onChange={(e) => e.target.value && setDateTo(e.target.value)} /></label>
         </div>
       </div>
 
       {error && <Notice kind="error">{error}</Notice>}
 
-      <div className="row-wrap" style={{ alignItems: "stretch" }}>
-        <div className="stat"><div className="muted">Waiting for you</div><div className="v">{waiting}</div></div>
-        <div className="stat"><div className="muted">Approved, not exported</div><div className="v">{unexported}</div></div>
-        <div className="stat"><div className="muted">Net over/short in range</div>
-          <div className={`v ${netOverShort < 0 ? "neg" : ""}`}>{formatOverShort(netOverShort)}</div></div>
+      <div className="stat-row">
+        {tile("submitted", "Needs your review", waiting, "Submitted by staff, waiting for approve / send back")}
+        {tile("approved", "Approved, not exported", unexported, "Ready for the QuickBooks export")}
+        {tile(MISSING, "Missing days", missingCount, "Past days with no worksheet started")}
+        {tile("returned", "Sent back", sentBack, "Waiting for staff to fix")}
+        <div className="stat">
+          <div className="muted">Net over/short</div>
+          <div className={`v ${netOverShort < 0 ? "neg" : ""}`}>{formatOverShort(netOverShort)}</div>
+          <div className="stat-hint">Submitted + approved days in range</div>
+        </div>
       </div>
 
-      <div className="table-wrap">
-        <table style={{ minWidth: 760 }}>
-          <thead>
-            <tr>
-              <th className="left">Date</th><th className="left">Store</th><th>Total sales</th><th>Expected cash</th>
-              <th>Over/(short)</th><th className="left">Submitted by</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {status === "" || status === "submitted"
-              ? missing.map((m) => (
-                  <tr key={`${m.store}-${m.date}`} className="missing">
-                    <td className="left">{prettyDate(m.date)}</td><td className="left">{m.store}</td>
-                    <td>—</td><td>—</td><td>—</td><td className="left">—</td><td><StatusChip status="missing" /></td>
+      {status === MISSING ? (
+        <section className="card">
+          <div className="card-head">Missing days <span className="muted">· click a day to open its worksheet</span></div>
+          <div className="card-body stack">
+            {missingByStore.length === 0 && <div className="muted">Every store has a worksheet for every past day in this range.</div>}
+            {missingByStore.map(({ store, dates }) => (
+              <div key={store.id} className="missing-store">
+                <div className="missing-store-head">
+                  <strong>{store.name}</strong>
+                  <span className="muted">{dates.length} day{dates.length === 1 ? "" : "s"}</span>
+                </div>
+                <div className="date-chips">
+                  {dates.map((d) => (
+                    <button key={d} type="button" className="date-chip" title="Open this day's worksheet"
+                      onClick={() => navigate(`/worksheet?store=${store.id}&date=${d}`)}>{prettyDate(d)}</button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <div className="table-wrap">
+          <table style={{ minWidth: 760 }}>
+            <thead>
+              <tr>
+                <th className="left">Date</th><th className="left">Store</th><th>Total sales</th><th>Expected cash</th>
+                <th>Over/(short)</th><th className="left">Submitted by</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const os = toCents(r.over_short);
+                return (
+                  <tr key={r.id} className="clickable" onClick={() => navigate(`/days/${r.id}`)}>
+                    <td className="left"><a href={`/days/${r.id}`} onClick={(e) => e.preventDefault()}>{prettyDate(r.business_date)}</a></td>
+                    <td className="left">{r.store_name}</td>
+                    <td>{formatMoney(toCents(r.total_sales))}</td>
+                    <td>{formatMoney(toCents(r.expected_cash))}</td>
+                    <td className={os < 0 ? "neg" : os > 0 ? "pos" : ""}>{formatOverShort(os)}</td>
+                    <td className="left">{r.submitted_by_name ?? "—"}</td>
+                    <td><StatusChip status={r.status as Status} /></td>
                   </tr>
-                ))
-              : null}
-            {rows.map((r) => {
-              const os = toCents(r.over_short);
-              return (
-                <tr key={r.id} className="clickable" onClick={() => navigate(`/days/${r.id}`)}>
-                  <td className="left"><a href={`/days/${r.id}`} onClick={(e) => e.preventDefault()}>{prettyDate(r.business_date)}</a></td>
-                  <td className="left">{r.store_name}</td>
-                  <td>{formatMoney(toCents(r.total_sales))}</td>
-                  <td>{formatMoney(toCents(r.expected_cash))}</td>
-                  <td className={os < 0 ? "neg" : os > 0 ? "pos" : ""}>{formatOverShort(os)}</td>
-                  <td className="left">{r.submitted_by_name ?? "—"}</td>
-                  <td><StatusChip status={r.status as Status} /></td>
-                </tr>
-              );
-            })}
-            {rows.length === 0 && missing.length === 0 && (
-              <tr><td colSpan={7} className="left muted" style={{ padding: 24 }}>Nothing here for these filters.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                );
+              })}
+              {rows.length === 0 && (
+                <tr><td colSpan={7} className="left muted" style={{ padding: 24 }}>
+                  No worksheets in “{currentLabel}” for these dates.
+                  {status === "submitted" && " You're all caught up."}
+                </td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }

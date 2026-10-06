@@ -12,7 +12,7 @@ export interface Me {
   email: string;
   name: string;
   role: Role;
-  stores: { id: string; name: string }[];
+  stores: { id: string; name: string; tracking_since: string }[];
   over_short_alert: string;
   sales_tax_rate: string;
 }

@@ -177,6 +177,17 @@ tr.missing td { background: #fffff0; }
 
 .stat { flex: 1 1 180px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
 .stat .v { font-size: 26px; font-weight: 700; color: var(--ink); }
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.stat-hint { font-size: 12px; color: var(--ink-soft); margin-top: 4px; line-height: 1.3; }
+.stat-btn { display: flex; flex-direction: column; justify-content: flex-start; text-align: left; font: inherit; cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.stat-btn:hover { border-color: #90cdf4; }
+.stat-btn.attention .v { color: var(--amber-deep); }
+.stat-btn.active { border-color: var(--ink); box-shadow: 0 0 0 2px rgba(26, 54, 93, .15); background: #f7fafc; }
+.missing-store { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.missing-store-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.date-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.date-chip { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid #fbd38d; background: var(--amber-bg); color: #744210; cursor: pointer; }
+.date-chip:hover { border-color: #dd6b20; }
 
 /* ---------- sign in ---------- */
 .signin { min-height: 100vh; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; padding: 24px; }
