@@ -23,3 +23,16 @@ export function money(value: string | number | null | undefined): string {
 export function toApiAmount(value: string): string {
   return (toCents(value) / 100).toFixed(2);
 }
+
+/** Strict reading of a typed amount for the books: "$1,234.50" → "1234.50", "(500)" or "-500" → "-500.00".
+ *  Returns null when it isn't a number, so the screen can say so instead of saving 0.00. */
+export function parseAmount(value: string): string | null {
+  let t = value.trim().replace(/[$,\s]/g, "");
+  if (t === "") return "0.00";
+  let negative = false;
+  if (/^\(.*\)$/.test(t)) { negative = true; t = t.slice(1, -1); }
+  if (t.startsWith("-")) { negative = !negative; t = t.slice(1); }
+  if (!/^(\d+\.?\d*|\.\d+)$/.test(t)) return null;
+  const cents = Math.round(parseFloat(t) * 100);
+  return ((negative ? -cents : cents) / 100).toFixed(2);
+}

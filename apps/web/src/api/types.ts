@@ -179,3 +179,56 @@ export interface PeriodSummary {
   rows: PeriodRow[];
   missing: { store_id: string; store_name: string; days: number }[];
 }
+
+// ---------- The owner's books (amounts are exact strings) ----------
+export type VendorKind = "fuel" | "merchandise" | "expense"; // fuel / merchandise = cost of goods
+export interface Vendor { id: string; name: string; kind: VendorKind; active: boolean; used: boolean }
+
+export type EntryCategory = "fuel_purchase" | "merchandise_purchase" | "expense";
+export interface LedgerEntry {
+  id: string;
+  month: string; // first day, e.g. 2026-10-01
+  store_id: string | null; // null = All stores (shared)
+  store_name: string | null;
+  category: EntryCategory;
+  description: string;
+  vendor_id: string | null;
+  vendor_name: string | null;
+  amount: string;
+}
+export interface EntryInput {
+  month: string; // 2026-10
+  store_id: string | null;
+  category: EntryCategory;
+  description: string;
+  vendor_id: string | null;
+  amount: string;
+}
+
+export interface BookLine { label: string; amount: string; source: "typed" | "paid_outs" | "days" | "auto"; items: { what?: string; vendor?: string | null; amount: string }[] }
+export interface ProfitAndLoss {
+  month: string; label: string; days: number;
+  fuel_sales: string; merchandise_sales: string; taxable: string; non_taxable: string; sales_tax: string;
+  revenue: string; cost_lines: BookLine[]; cost_of_goods: string; gross_profit: string;
+  expense_lines: BookLine[]; expenses: string; over_short: string; net_profit: string; count_paid_outs: boolean;
+}
+export interface PnlYear {
+  year: string;
+  months: { month: string; revenue: string; cost_of_goods: string; expenses: string; over_short: string; net_profit: string }[];
+  totals: { revenue: string; cost_of_goods: string; expenses: string; over_short: string; net_profit: string };
+}
+
+export type BalanceSection = "asset" | "liability" | "equity";
+export interface BalanceLineInput { section: BalanceSection; name: string; amount: string }
+export interface BalanceSheet {
+  month: string; label: string; store_id: string | null;
+  typed_lines: BalanceLineInput[];
+  assets: BookLine[]; liabilities: BookLine[]; equity: BookLine[];
+  total_assets: string; total_liabilities: string; total_equity: string; difference: string; balanced: boolean;
+}
+
+export interface VendorSpending {
+  label: string; total: string;
+  vendors: { vendor: string; on_list: boolean; cost_of_goods: string; expense: string; not_on_list: string; total: string; share: string;
+             items: { date: string; what: string; amount: string; source: "typed" | "paid_out" }[] }[];
+}

@@ -8,6 +8,7 @@ import { api } from "../api/client";
 import type { Period, PeriodRow, PeriodSums, PeriodSummary, Status } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
+import { ReportTabs } from "../components/ReportTabs";
 import { StatusChip } from "../components/StatusChip";
 import { prettyDate, today } from "../lib/dates";
 import { formatMoney, formatOverShort, toCents } from "../lib/money";
@@ -62,7 +63,7 @@ export function ReportsPage() {
     <main className="page stack">
       <div className="page-head">
         <div>
-          <h1>Reports</h1>
+          <h1>Sales</h1>
           <div className="muted">{data ? data.label : "…"} · {storeId ? me?.stores.find((s) => s.id === storeId)?.name ?? "1 store" : "All stores"} · {include === "approved" ? "approved days" : "approved + waiting for review"}</div>
         </div>
         <button type="button" className="btn btn-ghost" disabled={!data || data.totals.days === 0}
@@ -70,6 +71,8 @@ export function ReportsPage() {
           Download for Excel
         </button>
       </div>
+
+      <ReportTabs />
 
       <div className="report-controls">
         <div className="segmented" role="tablist" aria-label="Period">

@@ -18,6 +18,9 @@ RESET_STEPS = [
     ("worksheets", "delete from daily_reports"),
     ("photos", "delete from attachments"),
     ("store_links", "delete from store_members"),
+    ("books_entries", "delete from ledger_entries"),
+    ("balance_lines", "delete from balance_lines"),
+    ("vendors", "delete from vendors"),
     ("people", "delete from people where role <> 'admin'"),
     ("stores", "delete from stores"),
 ]

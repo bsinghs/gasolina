@@ -34,7 +34,9 @@ COUNT_SQL = "count(*) as days, count(*) filter (where r.over_short < 0) as days_
 
 
 def period_range(period: str, value: str) -> tuple[date, date, str]:
-    """'month' 2026-10 · 'quarter' 2026-Q4 · 'year' 2026 → first day, last day, label."""
+    """'month' 2026-10 · 'quarter' 2026-Q4 · 'year' 2026 → first day, last day, label. Years 2000-2099."""
+    if not re.match(r"20\d{2}", value):
+        raise bad_request("Pick a year between 2000 and 2099")
     if period == "month" and re.fullmatch(r"\d{4}-\d{2}", value):
         y, m = map(int, value.split("-"))
         if 1 <= m <= 12:

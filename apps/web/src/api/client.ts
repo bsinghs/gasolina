@@ -2,7 +2,8 @@
 
 import type {
   AppSettings, JournalLine, Me, Person, Report, ReportSummary, Store, WorksheetInput,
-  Period, PeriodSummary,
+  Period, PeriodSummary, Vendor, VendorKind, LedgerEntry, EntryInput, ProfitAndLoss, PnlYear, BalanceSheet,
+  BalanceLineInput, VendorSpending,
 } from "./types";
 
 const BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api";
@@ -130,6 +131,33 @@ export const api = {
       request<PeriodSummary>(`/summaries${query(q)}`),
     csv: (q: { period: Period; value: string; store_id?: string; include: "approved" | "submitted" }) =>
       download(`/summaries/csv${query(q)}`),
+  },
+
+  vendors: {
+    list: () => request<Vendor[]>("/vendors"),
+    add: (data: { name: string; kind: VendorKind; active?: boolean }) => request<Vendor>("/vendors", { method: "POST", body: data }),
+    update: (id: string, data: { name: string; kind: VendorKind; active: boolean }) =>
+      request<Vendor>(`/vendors/${id}`, { method: "PATCH", body: data }),
+    remove: (id: string) => request<{ ok: boolean }>(`/vendors/${id}`, { method: "DELETE" }),
+    spending: (q: { period: "month" | "year"; value: string; store_id?: string; include: "approved" | "submitted" }) =>
+      request<VendorSpending>(`/vendors/spending${query(q)}`),
+  },
+
+  books: {
+    entries: (month: string, store_id?: string) => request<LedgerEntry[]>(`/books/entries${query({ month, store_id })}`),
+    addEntry: (data: EntryInput) => request<LedgerEntry>("/books/entries", { method: "POST", body: data }),
+    updateEntry: (id: string, data: EntryInput) => request<LedgerEntry>(`/books/entries/${id}`, { method: "PATCH", body: data }),
+    removeEntry: (id: string) => request<{ ok: boolean }>(`/books/entries/${id}`, { method: "DELETE" }),
+    pnl: (q: { month: string; store_id?: string; include: "approved" | "submitted"; count_paid_outs: boolean }) =>
+      request<ProfitAndLoss>(`/books/pnl${query(q)}`),
+    pnlYear: (q: { year: string; store_id?: string; include: "approved" | "submitted"; count_paid_outs: boolean }) =>
+      request<PnlYear>(`/books/pnl-year${query(q)}`),
+    balance: (month: string, store_id?: string, count_paid_outs = true) =>
+      request<BalanceSheet>(`/books/balance${query({ month, store_id, count_paid_outs })}`),
+    saveBalance: (data: { month: string; store_id: string | null; lines: BalanceLineInput[] }) =>
+      request<BalanceSheet>("/books/balance", { method: "PUT", body: data }),
+    copyPrevious: (month: string, store_id?: string) =>
+      request<BalanceSheet & { copied: number }>(`/books/balance/copy-previous${query({ month, store_id })}`, { method: "POST" }),
   },
 
   settings: {

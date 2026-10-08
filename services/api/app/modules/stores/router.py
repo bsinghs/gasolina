@@ -59,6 +59,9 @@ def delete_store(store_id: UUID, _: CurrentUser = Depends(owner_only)):
             raise not_found("Store not found")
         if db.fetch_one(conn, "select 1 from daily_reports where store_id = %s limit 1", [store_id]):
             raise conflict("This store has worksheets. Deactivate it instead so the records stay.")
+        if db.fetch_one(conn, """select 1 from ledger_entries where store_id = %s
+                                 union all select 1 from balance_lines where store_id = %s limit 1""", [store_id, store_id]):
+            raise conflict("This store has purchases, expenses or balances in the books. Deactivate it instead so the records stay.")
         stranded = db.fetch_all(
             conn,
             """select p.name from people p join store_members m on m.person_id = p.id

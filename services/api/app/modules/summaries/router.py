@@ -3,7 +3,6 @@
 import csv
 import io
 from datetime import date
-from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
@@ -11,20 +10,11 @@ from fastapi import APIRouter, Depends, Response
 
 from app.core import db
 from app.core.auth import CurrentUser, owner_only
+from app.core.json import exact
 from app.modules.summaries import service
 
 router = APIRouter(prefix="/summaries", tags=["summaries"])
 
-
-def _exact(value):
-    """Money stays exact: Decimals go out as strings ("3518.33"), never floats (project rule 2)."""
-    if isinstance(value, Decimal):
-        return str(value)
-    if isinstance(value, dict):
-        return {k: _exact(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_exact(v) for v in value]
-    return value
 
 Period = Literal["month", "quarter", "year"]
 Include = Literal["approved", "submitted"]
@@ -34,7 +24,7 @@ Include = Literal["approved", "submitted"]
 def get_summary(period: Period, value: str, store_id: UUID | None = None, include: Include = "approved",
                 _: CurrentUser = Depends(owner_only)):
     with db.transaction() as conn:
-        return _exact(service.summary(conn, period, value, store_id, include, date.today()))
+        return exact(service.summary(conn, period, value, store_id, include, date.today()))
 
 
 CSV_COLUMNS = ["days", "fuel_sale", "merch_sale", "taxable_sale", "nontaxable_sale", "sales_tax", "total_sales",

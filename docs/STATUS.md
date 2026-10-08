@@ -1,6 +1,6 @@
 # Status and next steps
 
-_Last updated: Oct 5, 2026_
+_Last updated: Oct 8, 2026_
 
 ## Done
 
@@ -15,6 +15,7 @@ _Last updated: Oct 5, 2026_
 | Review queue v2 + admin View as (Oct 5) | Count boxes are filters; missing days grouped per store (date chips open the worksheet), follow From/To, past days only, from the store's start. App admin can **View as** any owner/manager/employee from the header: read-only, blue banner, hidden from everyone else | 26 API tests (view-as read-only + admin-only); browser click-through |
 | Worksheet v3, phase 1 (Oct 8) | Owner's edited form: TRUTH logo + metallic header, gold store name, Fuel / Merch / Tax in one row, **ending inventory per tank** (tank names per store in Settings), paid-out **vendor name** suggestions. Migration 006. Spec: [features/worksheet-v3-and-reports.md](features/worksheet-v3-and-reports.md) (phases 2-3: monthly/yearly, P&L, balance sheet, vendors) | 27 API tests; laptop + phone click-through |
 | Reports: month / quarter / year (Oct 8) | Owner-only Reports tab. Read-only totals from approved days (toggle adds days waiting for review): sales, fuel + gallons, merchandise + taxable / non-taxable, PA tax, over/short; by store; day-by-day or month-by-month; Excel download. Spec: [features/monthly-reports.md](features/monthly-reports.md) | 28 API tests (sums to the cent, quarter months, toggle, owner-only, worksheets unchanged); totals cross-checked in SQL; laptop + phone |
+| Books: Vendors, Profit & Loss, Balance Sheet (Oct 8) | Owner-only, under Reports. Vendor list (cost of goods fuel / merchandise, or expense) with spending by vendor; P&L per month (sales from approved days, typed purchases / expenses, daily paid outs sorted by vendor, over/short) + year view; Balance Sheet at month end (typed lines, PA tax owed, profit to date, check). Add-only migration 007, math in pure functions, every change in history. Spec: [features/worksheet-v3-and-reports.md](features/worksheet-v3-and-reports.md) | 61 API tests (7 math unit, 12 API, 14 from independent review); 22 browser checks owner / employee / view-as / phone; P&L cross-checked in SQL |
 
 ## Next: get it live (you)
 

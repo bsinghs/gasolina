@@ -49,7 +49,9 @@ services/api/app/
 │   ├── config.py      settings from environment variables
 │   ├── db.py          database connection + fetch_one / fetch_all / execute
 │   ├── auth.py        sign-in token -> CurrentUser (and the owner_only check)
-│   └── errors.py      not_found(), forbidden(), ...
+│   ├── errors.py      not_found(), forbidden(), ...
+│   ├── audit.py       one history-log line for owner actions (books, vendors)
+│   └── json.py        exact(): money out as strings, never floats
 └── modules/
     ├── me/            who am I, which stores can I use
     ├── stores/        gas station locations
@@ -61,7 +63,12 @@ services/api/app/
     │   └── reconciliation.py  the worksheet math (pure, tested)
     ├── exports/       QuickBooks journal-entry CSV and other downloads
     │   └── journal_entry.py   worksheet -> balanced journal entry (pure, tested)
-    └── settings/      QuickBooks account names, over/short alert
+    ├── settings/      QuickBooks account names, over/short alert, sales tax rate
+    ├── summaries/     sales totals for a month / quarter / year (read-only)
+    ├── vendors/       vendor list (cost of goods or expense) + spending by vendor
+    ├── books/         owner's typed purchases / expenses, Profit & Loss, Balance Sheet
+    │   └── math.py            P&L and balance-sheet math (pure, tested)
+    └── admin/         test-only reset; View-as lives in core/auth.py
 ```
 
 `router.py` = endpoints, `schemas.py` = data shapes, `service.py` = rules. Small modules keep their few SQL queries in the router; when a module grows rules, they move to `service.py`.
