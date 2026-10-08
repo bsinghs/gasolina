@@ -27,11 +27,12 @@ interface Form {
   cash_drop: string;
   employee_note: string;
   paid_outs: PaidOut[];
+  tanks: Record<string, string>; // ending gallons by tank name
 }
 
 const EMPTY: Form = {
   fuel_sale: "", merch_sale: "", sales_tax: "", gallons: "", credit: "", debit: "", ebt: "", cash_drop: "",
-  employee_note: "", paid_outs: [],
+  employee_note: "", paid_outs: [], tanks: {},
 };
 
 function blankIfZero(v: string) {
@@ -44,6 +45,7 @@ function formFromReport(r: Report): Form {
     gallons: parseFloat(r.gallons) ? r.gallons : "",
     employee_note: r.employee_note ?? "",
     paid_outs: r.paid_outs,
+    tanks: Object.fromEntries((r.tank_inventory ?? []).map((t) => [t.tank, t.gallons])),
   } as Form;
 }
 
@@ -61,6 +63,17 @@ export function WorksheetPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmOver, setConfirmOver] = useState(false);
   const saveTimer = useRef<number>();
+  const [payees, setPayees] = useState<string[]>([]);
+
+  // Vendor names already used at this store, offered on the paid-out lines
+  useEffect(() => {
+    if (!storeId) return;
+    let current = true;
+    api.reports.payees(storeId).then((p) => current && setPayees(p)).catch(() => current && setPayees([]));
+    return () => {
+      current = false;
+    };
+  }, [storeId]);
 
   const isOwner = hasOwnerAccess(me?.role);
   const status = report?.status ?? "draft";
@@ -105,6 +118,9 @@ export function WorksheetPage() {
         paid_outs: form.paid_outs
           .filter((p) => p.payee.trim() || toCents(p.amount) > 0)
           .map((p) => ({ ...p, payee: p.payee.trim(), amount: toApiAmount(p.amount), check_no: p.check_no?.trim() || null })),
+        tank_inventory: Object.entries(form.tanks)
+          .filter(([, g]) => g.trim() !== "" && !Number.isNaN(parseFloat(g.replace(/,/g, ""))))
+          .map(([tank, g]) => ({ tank, gallons: Math.max(0, parseFloat(g.replace(/,/g, ""))).toFixed(1) })),
         field_sources: {},
       } as never);
       setReport(saved);
@@ -172,6 +188,10 @@ export function WorksheetPage() {
     </div>
   );
 
+  const storeTanks = me.stores.find((s) => s.id === storeId)?.tanks ?? [];
+  // the store's tanks, plus any tank this day already has a reading for (renamed since)
+  const tankNames = [...storeTanks, ...Object.keys(form.tanks).filter((n) => !storeTanks.includes(n))];
+  const tankTotal = tankNames.reduce((sum, n) => sum + (parseFloat((form.tanks[n] ?? "").replace(/,/g, "")) || 0), 0);
   const cashLines = form.paid_outs.filter((p) => p.kind === "cash");
   const checkLines = form.paid_outs.filter((p) => p.kind === "check");
   const gallons = parseFloat(form.gallons.replace(/,/g, "")) || 0;
@@ -199,10 +219,13 @@ export function WorksheetPage() {
       {unnamedLine && <Notice kind="warn">Add who each paid-out was paid to, so it can be saved.</Notice>}
 
       <div className="sheet-card">
-        <header className="sheet-header">
-          <h1>Daily Sales Worksheet</h1>
+        <header className="sheet-header sheet-header-brand">
+          <div className="sheet-brand">
+            <img className="sheet-logo" src="/brand-logo.png" alt="" />
+            <h1>Daily Sales Worksheet</h1>
+          </div>
           <div className="meta">
-            <select aria-label="Store" value={storeId} onChange={(e) => setParams({ store: e.target.value, date })}>
+            <select className="store-gold" aria-label="Store" value={storeId} onChange={(e) => setParams({ store: e.target.value, date })}>
               {me.stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <input type="date" aria-label="Business date" value={date} max={today()}
@@ -220,11 +243,9 @@ export function WorksheetPage() {
 
         <section className="section">
           <h2 className="section-title">Sales</h2>
-          <div className="fields" style={TWO_COLS}>
+          <div className="fields fields-three">
             {moneyField("fuel_sale", "Fuel Sales")}
             {moneyField("merch_sale", "Merchandise Sales")}
-          </div>
-          <div className="fields fields-next" style={TWO_COLS}>
             {moneyField("sales_tax", "PA Sales Tax Collected")}
           </div>
           <div className="fields fields-next" style={TWO_COLS}>
@@ -264,9 +285,9 @@ export function WorksheetPage() {
         <section className="section">
           <h2 className="section-title">Paid Outs</h2>
           <div className="grid-2">
-            <PaidOutLines kind="cash" lines={cashLines} disabled={!editable}
+            <PaidOutLines kind="cash" lines={cashLines} disabled={!editable} suggestions={payees}
               onChange={(lines) => change({ paid_outs: [...lines, ...checkLines] })} />
-            <PaidOutLines kind="check" lines={checkLines} disabled={!editable}
+            <PaidOutLines kind="check" lines={checkLines} disabled={!editable} suggestions={payees}
               onChange={(lines) => change({ paid_outs: [...cashLines, ...lines] })} />
           </div>
           <div className="calc-box">
@@ -305,6 +326,24 @@ export function WorksheetPage() {
             </div>
           </div>
         </section>
+
+        {tankNames.length > 0 && (
+          <section className="section">
+            <h2 className="section-title">Inventory Report (Ending)</h2>
+            <div className="fields fields-three">
+              {tankNames.map((name, i) => (
+                <div className="field" key={name}>
+                  <label htmlFor={`tank-${i}`}>{name} (gal)</label>
+                  <input id={`tank-${i}`} className="num" inputMode="decimal" placeholder="0.0" value={form.tanks[name] ?? ""}
+                    disabled={!editable} onChange={(e) => change({ tanks: { ...form.tanks, [name]: e.target.value } })} />
+                </div>
+              ))}
+            </div>
+            <p className="muted" style={{ margin: "10px 0 0" }}>
+              Gallons left in each tank at closing (from the tank monitor). Total: <strong>{tankTotal > 0 ? tankTotal.toLocaleString("en-US", { maximumFractionDigits: 1 }) + " gal" : "–"}</strong>
+            </p>
+          </section>
+        )}
 
         <section className="section">
           <h2 className="section-title">Notes / Comments</h2>

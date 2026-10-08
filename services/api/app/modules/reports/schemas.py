@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Money = Decimal  # always 2 decimals; validated with ge=0 where it matters
 Status = Literal["draft", "submitted", "returned", "approved", "exported"]
@@ -24,6 +24,18 @@ class PaidOut(PaidOutIn):
     id: UUID
 
 
+class TankReading(BaseModel):
+    """Gallons left in one underground tank at closing (ending inventory)."""
+
+    tank: str = Field(min_length=1, max_length=60)
+    gallons: Decimal = Field(ge=0, decimal_places=1, max_digits=9)
+
+    @field_validator("gallons")
+    @classmethod
+    def one_decimal(cls, v: Decimal) -> Decimal:
+        return v.quantize(Decimal("0.1"))
+
+
 class WorksheetIn(BaseModel):
     """What the employee's form sends when saving a draft."""
 
@@ -39,6 +51,7 @@ class WorksheetIn(BaseModel):
     cash_drop: Money = Field(default=Decimal("0"), ge=0, decimal_places=2, max_digits=12)
     employee_note: str | None = Field(default=None, max_length=2000)
     paid_outs: list[PaidOutIn] = Field(default_factory=list, max_length=100)
+    tank_inventory: list[TankReading] = Field(default_factory=list, max_length=10)
     field_sources: dict[str, Source] = Field(default_factory=dict)
 
 
@@ -82,6 +95,7 @@ class Report(BaseModel):
     expected_cash: Money
     over_short: Money
     field_sources: dict
+    tank_inventory: list[TankReading] = []
     submitted_by_name: str | None
     submitted_at: datetime | None
     reviewed_by_name: str | None

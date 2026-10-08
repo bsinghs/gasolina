@@ -104,6 +104,19 @@ def list_reports(
     return rows
 
 
+def payees(conn: Connection, user: CurrentUser, store_id: UUID) -> list[str]:
+    if not user.can_access_store(store_id):
+        raise forbidden("You're not assigned to this store")
+    rows = db.fetch_all(
+        conn,
+        """select min(p.payee) as payee from paid_outs p join daily_reports r on r.id = p.report_id
+           where r.store_id = %s and r.business_date > current_date - 365 and trim(p.payee) <> ''
+           group by lower(trim(p.payee)) order by count(*) desc, min(p.payee) limit 200""",
+        [store_id],
+    )
+    return [r["payee"].strip() for r in rows]
+
+
 # ---------- saving ----------
 
 def save_worksheet(conn: Connection, user: CurrentUser, data: WorksheetIn) -> UUID:
@@ -122,6 +135,7 @@ def save_worksheet(conn: Connection, user: CurrentUser, data: WorksheetIn) -> UU
     values = {k: getattr(data, k) for k in NUMBER_FIELDS} | totals.__dict__ | {
         "employee_note": data.employee_note,
         "field_sources": json.dumps(data.field_sources),
+        "tank_inventory": json.dumps([t.model_dump(mode="json") for t in data.tank_inventory]),
     }
 
     report_id = find_report_id(conn, data.store_id, data.business_date)

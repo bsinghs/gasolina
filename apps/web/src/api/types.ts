@@ -12,7 +12,7 @@ export interface Me {
   email: string;
   name: string;
   role: Role;
-  stores: { id: string; name: string; tracking_since: string }[];
+  stores: { id: string; name: string; tracking_since: string; tanks: string[] }[];
   over_short_alert: string;
   sales_tax_rate: string;
   view_as_options?: { id: string; name: string; role: Role }[] | null; // app admin only
@@ -24,6 +24,7 @@ export interface Store {
   name: string;
   qb_location: string | null;
   active: boolean;
+  tanks: string[]; // underground fuel tanks, in reading order
 }
 
 export interface Person {
@@ -58,7 +59,13 @@ export interface WorksheetInput {
   cash_drop: string;
   employee_note: string | null;
   paid_outs: PaidOut[];
+  tank_inventory: TankReading[]; // ending gallons per tank
   field_sources: Record<string, "typed" | "ai" | "ai_corrected">;
+}
+
+export interface TankReading {
+  tank: string;
+  gallons: string;
 }
 
 export interface HistoryEntry {

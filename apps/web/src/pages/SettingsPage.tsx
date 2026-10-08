@@ -23,6 +23,7 @@ export function SettingsPage() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [editTanks, setEditTanks] = useState<{ id: string; text: string } | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [taxPct, setTaxPct] = useState("6");
   const [newStore, setNewStore] = useState({ name: "", qb_location: "" });
@@ -67,7 +68,26 @@ export function SettingsPage() {
         <div className="card-body">
           {stores.map((s) => (
             <div key={s.id} className="field-row">
-              <span style={s.active ? undefined : { opacity: 0.5 }}>{s.name}{!s.active && <span className="muted"> (deactivated)</span>}{s.qb_location ? <span className="muted"> · QB location: {s.qb_location}</span> : null}</span>
+              <span style={s.active ? undefined : { opacity: 0.5 }}>
+                {s.name}{!s.active && <span className="muted"> (deactivated)</span>}{s.qb_location ? <span className="muted"> · QB location: {s.qb_location}</span> : null}
+                {editTanks?.id === s.id ? (
+                  <span className="row-wrap" style={{ gap: 8, marginTop: 6 }}>
+                    <input className="text" style={{ minWidth: 260, flex: 1 }} aria-label={`Tanks at ${s.name}, separated by commas`}
+                      value={editTanks.text} onChange={(e) => setEditTanks({ id: s.id, text: e.target.value })} />
+                    <button className="btn btn-primary btn-sm" onClick={() => {
+                      const tanks = editTanks.text.split(",").map((t) => t.trim()).filter(Boolean);
+                      setEditTanks(null);
+                      guard(() => api.stores.update(s.id, { ...s, tanks }), "Tanks saved. Past days keep the tank names they were entered with.");
+                    }}>Save tanks</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditTanks(null)}>Cancel</button>
+                  </span>
+                ) : (
+                  <span className="muted" style={{ display: "block", fontSize: 12 }}>
+                    Tanks: {(s.tanks ?? []).join(" · ") || "–"}{" "}
+                    <button className="link-btn" style={{ padding: 0, minHeight: 0, fontSize: 12 }} onClick={() => setEditTanks({ id: s.id, text: (s.tanks ?? []).join(", ") })}>Change</button>
+                  </span>
+                )}
+              </span>
               {confirmDelete === s.id ? (
                 <span className="row-wrap" style={{ gap: 8, alignItems: "center" }}>
                   <span className="muted">Delete permanently?</span>

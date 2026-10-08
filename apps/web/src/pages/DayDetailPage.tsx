@@ -107,6 +107,7 @@ export function DayDetailPage() {
             {line("Sales tax", formatMoney(toCents(report.sales_tax)))}
             {line("Total sales", formatMoney(toCents(report.total_sales)), true)}
             {line("Gallons", `${report.gallons} gal`)}
+            {(report.tank_inventory ?? []).map((t) => line(`↳ Ending: ${t.tank}`, `${t.gallons} gal`))}
             {line("Credit / debit", `${formatMoney(toCents(report.credit))} / ${formatMoney(toCents(report.debit))}`)}
             {line("EBT", formatMoney(toCents(report.ebt)))}
             {cashLines.map((p) => line(`Cash paid out: ${p.payee}`, formatMoney(toCents(p.amount))))}

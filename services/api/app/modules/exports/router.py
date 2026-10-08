@@ -128,7 +128,8 @@ def export_raw(date_from: date, date_to: date, user: CurrentUser = Depends(owner
         )
     out = io.StringIO()
     writer = csv.writer(out)
-    writer.writerow(columns)
+    writer.writerow(columns + ["ending_inventory"])
     for r in rows:
-        writer.writerow(["" if r[c] is None else r[c] for c in columns])
+        tanks = "; ".join(f"{t['tank']}: {t['gallons']}" for t in (r.get("tank_inventory") or []))
+        writer.writerow(["" if r[c] is None else r[c] for c in columns] + [tanks])
     return _csv_response(out.getvalue(), f"daily-sales-{date_from}-to-{date_to}.csv")

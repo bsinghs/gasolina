@@ -87,7 +87,7 @@ export const api = {
   },
   stores: {
     list: () => request<Store[]>("/stores"),
-    create: (data: Omit<Store, "id">) => request<Store>("/stores", { method: "POST", body: data }),
+    create: (data: Omit<Store, "id" | "tanks"> & { tanks?: string[] }) => request<Store>("/stores", { method: "POST", body: data }),
     update: (id: string, data: Omit<Store, "id">) => request<Store>(`/stores/${id}`, { method: "PATCH", body: data }),
     remove: (id: string) => request<{ ok: boolean }>(`/stores/${id}`, { method: "DELETE" }),
   },
@@ -106,6 +106,7 @@ export const api = {
     lookup: (store_id: string, business_date: string) =>
       request<Report | null>(`/reports/lookup${query({ store_id, business_date })}`),
     get: (id: string) => request<Report>(`/reports/${id}`),
+    payees: (store_id: string) => request<string[]>(`/reports/payees${query({ store_id })}`),
     save: (data: WorksheetInput) => request<Report>("/reports", { method: "PUT", body: data }),
     submit: (id: string) => request<Report>(`/reports/${id}/submit`, { method: "POST" }),
     sendBack: (id: string, note: string) => request<Report>(`/reports/${id}/return`, { method: "POST", body: { note } }),

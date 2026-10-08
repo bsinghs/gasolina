@@ -37,6 +37,13 @@ def lookup(store_id: UUID, business_date: date, user: CurrentUser = Depends(curr
         return service.get_report(conn, user, report_id) if report_id else None
 
 
+@router.get("/payees", response_model=list[str])
+def payees(store_id: UUID, user: CurrentUser = Depends(current_user)):
+    """Vendor names already used on paid outs at this store, most used first (suggestions for new lines)."""
+    with db.transaction() as conn:
+        return service.payees(conn, user, store_id)
+
+
 @router.get("/{report_id}", response_model=Report)
 def get_report(report_id: UUID, user: CurrentUser = Depends(current_user)):
     with db.transaction() as conn:

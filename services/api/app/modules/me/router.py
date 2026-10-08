@@ -20,6 +20,7 @@ class MyStore(BaseModel):
     # First day we expect worksheets: the day the store was added, or its first worksheet if older
     # (days entered after the fact). Earlier days are never shown as "missing".
     tracking_since: date
+    tanks: list[str]  # underground fuel tanks, for the ending-inventory section
 
 
 class ViewAsOption(BaseModel):
@@ -45,7 +46,7 @@ class Me(BaseModel):
 def me(user: CurrentUser = Depends(current_user)):
     with db.transaction() as conn:
         select = """
-            select s.id, s.name,
+            select s.id, s.name, s.tanks,
                    least(s.created_at::date, (select min(r.business_date) from daily_reports r where r.store_id = s.id))
                        as tracking_since
             from stores s where s.active"""

@@ -136,6 +136,40 @@ def test_admin_view_as_is_read_only_and_admin_only(client):
     assert client.get("/api/me", headers=OWNER).json()["view_as_options"] is None
     assert client.get("/api/me", headers=EMP).json()["view_as_options"] is None
 
+
+def test_tank_inventory_and_vendor_suggestions(client):
+    """Owner (Oct 8): ending gallons per tank, tank names per store; paid-out vendor suggestions."""
+    store = client.post("/api/stores", json={"name": "Tank Town"}, headers=OWNER).json()
+    assert store["tanks"] == ["Tank 1 – Regular", "Tank 2 – Regular", "Tank 3 – Premium"]  # default
+    client.post("/api/people", json={"email": "tankemp@example.com", "name": "Tia", "store_ids": [store["id"]]}, headers=OWNER)
+    emp = {"X-Dev-Email": "tankemp@example.com"}
+    me_store = next(s for s in client.get("/api/me", headers=emp).json()["stores"] if s["id"] == store["id"])
+    assert me_store["tanks"] == store["tanks"]
+
+    day = {"store_id": store["id"], "business_date": "2026-10-07", "fuel_sale": "100.00",
+           "tank_inventory": [{"tank": "Tank 1 – Regular", "gallons": "4100.5"}, {"tank": "Tank 3 – Premium", "gallons": "980"}],
+           "paid_outs": [{"kind": "cash", "payee": "Ice Co", "amount": "20.00"}, {"kind": "check", "payee": "Pepsi", "amount": "300.00"}]}
+    r = client.put("/api/reports", json=day, headers=emp)
+    assert r.status_code == 200, r.text
+    assert r.json()["tank_inventory"] == [{"tank": "Tank 1 – Regular", "gallons": "4100.5"}, {"tank": "Tank 3 – Premium", "gallons": "980.0"}]
+    bad = day | {"tank_inventory": [{"tank": "Tank 1", "gallons": "-5"}]}
+    assert client.put("/api/reports", json=bad, headers=emp).status_code == 422
+
+    # renaming tanks: kept when not sent, cleaned when sent, past days keep old names
+    keep = client.patch(f"/api/stores/{store['id']}", json={"name": "Tank Town", "active": True}, headers=OWNER).json()
+    assert keep["tanks"] == store["tanks"]
+    renamed = client.patch(f"/api/stores/{store['id']}", json={"name": "Tank Town", "tanks": [" Regular A ", "Premium", "premium", ""]}, headers=OWNER).json()
+    assert renamed["tanks"] == ["Regular A", "Premium"]
+    assert client.patch(f"/api/stores/{store['id']}", json={"name": "Tank Town", "tanks": [" "]}, headers=OWNER).status_code == 422
+    again = client.get(f"/api/reports/lookup?store_id={store['id']}&business_date=2026-10-07", headers=emp).json()
+    assert again["tank_inventory"][0]["tank"] == "Tank 1 – Regular"
+
+    # vendor suggestions: own stores only
+    assert set(client.get(f"/api/reports/payees?store_id={store['id']}", headers=emp).json()) == {"Ice Co", "Pepsi"}
+    assert client.get(f"/api/reports/payees?store_id={store['id']}", headers=OTHER).status_code == 403
+    raw = client.get("/api/exports/raw.csv?date_from=2026-10-07&date_to=2026-10-07", headers=OWNER).text
+    assert "Tank 1 – Regular: 4100.5; Tank 3 – Premium: 980.0" in raw
+
 def test_employee_needs_a_store(client):
     no_store = {"email": "nostore@example.com", "role": "employee", "store_ids": []}
     r = client.post("/api/people", json=no_store, headers=OWNER)
