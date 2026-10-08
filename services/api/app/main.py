@@ -19,6 +19,7 @@ from app.modules.people.router import router as people_router
 from app.modules.reports.router import router as reports_router
 from app.modules.settings.router import router as settings_router
 from app.modules.stores.router import router as stores_router
+from app.modules.summaries.router import router as summaries_router
 
 
 @asynccontextmanager
@@ -41,7 +42,7 @@ app.add_middleware(
     expose_headers=["Content-Disposition"],
 )
 
-for router in [me_router, stores_router, people_router, reports_router, exports_router, settings_router, admin_router]:
+for router in [me_router, stores_router, people_router, reports_router, exports_router, settings_router, admin_router, summaries_router]:
     app.include_router(router, prefix="/api")
 
 

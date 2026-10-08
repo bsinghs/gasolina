@@ -10,6 +10,7 @@ import { DayDetailPage } from "./pages/DayDetailPage";
 import { ExportPage } from "./pages/ExportPage";
 import { MyDaysPage } from "./pages/MyDaysPage";
 import { PeoplePage } from "./pages/PeoplePage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { ReviewPage } from "./pages/ReviewPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { NotInvitedPage, SignInPage } from "./pages/SignInPage";
@@ -37,6 +38,7 @@ export function App() {
         <Route path="/my" element={<MyDaysPage />} />
         <Route path="/review" element={<OwnerOnly><ReviewPage /></OwnerOnly>} />
         <Route path="/days/:id" element={<OwnerOnly><DayDetailPage /></OwnerOnly>} />
+        <Route path="/reports" element={<OwnerOnly><ReportsPage /></OwnerOnly>} />
         <Route path="/export" element={<OwnerOnly><ExportPage /></OwnerOnly>} />
         <Route path="/people" element={<OwnerOnly><PeoplePage /></OwnerOnly>} />
         <Route path="/settings" element={<OwnerOnly><SettingsPage /></OwnerOnly>} />

@@ -134,3 +134,48 @@ export interface AppSettings {
   sales_tax_rate: string;
   qb_accounts: QbAccounts;
 }
+
+// ---------- Reports (month / quarter / year totals; amounts are exact strings) ----------
+export type Period = "month" | "quarter" | "year";
+
+export interface PeriodSums {
+  days: number;
+  days_short: number;
+  days_unreviewed: number;
+  fuel_sale: string;
+  merch_sale: string;
+  taxable_sale: string;
+  nontaxable_sale: string;
+  sales_tax: string;
+  total_sales: string;
+  gallons: string;
+  credit: string;
+  debit: string;
+  ebt: string;
+  total_non_cash: string;
+  cash_paid_out: string;
+  expected_cash: string;
+  cash_drop: string;
+  over_short: string;
+}
+
+export interface PeriodRow extends PeriodSums {
+  key: string; // a date (month view) or "YYYY-MM" (quarter / year view)
+  report_id?: string;
+  store_id?: string;
+  store_name?: string;
+  status?: Status;
+}
+
+export interface PeriodSummary {
+  period: Period;
+  value: string;
+  label: string;
+  date_from: string;
+  date_to: string;
+  include: "approved" | "submitted";
+  totals: PeriodSums;
+  stores: (PeriodSums & { store_id: string; store_name: string })[];
+  rows: PeriodRow[];
+  missing: { store_id: string; store_name: string; days: number }[];
+}

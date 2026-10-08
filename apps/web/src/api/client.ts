@@ -2,6 +2,7 @@
 
 import type {
   AppSettings, JournalLine, Me, Person, Report, ReportSummary, Store, WorksheetInput,
+  Period, PeriodSummary,
 } from "./types";
 
 const BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api";
@@ -122,6 +123,13 @@ export const api = {
     checkPaidOuts: (date_from: string, date_to: string) =>
       download(`/exports/check-paid-outs.csv${query({ date_from, date_to })}`),
     raw: (date_from: string, date_to: string) => download(`/exports/raw.csv${query({ date_from, date_to })}`),
+  },
+
+  summaries: {
+    get: (q: { period: Period; value: string; store_id?: string; include: "approved" | "submitted" }) =>
+      request<PeriodSummary>(`/summaries${query(q)}`),
+    csv: (q: { period: Period; value: string; store_id?: string; include: "approved" | "submitted" }) =>
+      download(`/summaries/csv${query(q)}`),
   },
 
   settings: {

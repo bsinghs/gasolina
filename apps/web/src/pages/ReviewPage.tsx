@@ -3,7 +3,7 @@
 // counted only from the day the store was added (or its first worksheet).
 
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { ReportSummary, Status } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
@@ -28,7 +28,8 @@ export function ReviewPage() {
   const { me } = useAuth();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState("");
-  const [status, setStatus] = useState("submitted");
+  const [searchParams] = useSearchParams();
+  const [status, setStatus] = useState(searchParams.get("show") ?? "submitted"); // ?show=missing from Reports
   const [dateFrom, setDateFrom] = useState(daysAgo(13));
   const [dateTo, setDateTo] = useState(today());
   const [all, setAll] = useState<ReportSummary[]>([]);

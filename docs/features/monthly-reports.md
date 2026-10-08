@@ -1,6 +1,8 @@
 # Feature spec: monthly reports
 
-_Status: **draft** · Oct 4, 2026 · Asked for by the owner (via Bhajan)_
+_Status: **built (Oct 8): month / quarter / year** · Oct 4, 2026 · Asked for by the owner (via Bhajan)_
+
+**Built Oct 8** (Bhajan asked for monthly and quarterly, "make sure there is no data loss"): `GET /api/summaries?period=month|quarter|year&value=2026-10|2026-Q4|2026&store_id=&include=approved|submitted` and `/api/summaries/csv`. **Read-only** (SQL sums only, no new tables or columns; a test checks the worksheets are unchanged). Reports tab: Month / Quarter / Year, store filter, "include days waiting for review", totals (sales, fuel + gallons + avg price, merchandise + taxable / non-taxable, PA tax, net over/short), by-store table, day-by-day (month) or month-by-month (quarter / year, tap to drill in), missing-day warning, Download for Excel. Not yet: paid-outs grouping (S3) and charts (S4).
 
 ## Problem
 

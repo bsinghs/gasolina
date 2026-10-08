@@ -170,6 +170,64 @@ def test_tank_inventory_and_vendor_suggestions(client):
     raw = client.get("/api/exports/raw.csv?date_from=2026-10-07&date_to=2026-10-07", headers=OWNER).text
     assert "Tank 1 – Regular: 4100.5; Tank 3 – Premium: 980.0" in raw
 
+
+def test_month_quarter_year_reports(client):
+    """Owner reports add up the days exactly, only count reviewed days by default, and change nothing."""
+    from decimal import Decimal
+
+    import psycopg
+
+    store = client.post("/api/stores", json={"name": "Report Road"}, headers=OWNER).json()
+    client.post("/api/people", json={"email": "rep@example.com", "name": "Ravi", "store_ids": [store["id"]]}, headers=OWNER)
+    emp = {"X-Dev-Email": "rep@example.com"}
+
+    def day(d, fuel, merch, tax, drop, status):
+        r = client.put("/api/reports", json={"store_id": store["id"], "business_date": d, "fuel_sale": fuel,
+                                              "merch_sale": merch, "sales_tax": tax, "cash_drop": drop, "gallons": "10.5"}, headers=emp).json()
+        if status != "draft":
+            client.post(f"/api/reports/{r['id']}/submit", headers=emp)
+        if status == "approved":
+            assert client.post(f"/api/reports/{r['id']}/approve", json={}, headers=OWNER).status_code == 200
+        return r
+
+    day("2026-07-01", "1000.01", "200.10", "6.00", "1200.00", "approved")    # over/short -6.11
+    day("2026-07-02", "2000.02", "300.20", "12.00", "2320.00", "approved")   # +7.78
+    day("2026-08-15", "3000.03", "400.30", "18.00", "3418.33", "submitted")  # 0.00, waiting for review
+    day("2026-09-30", "500.00", "0", "0", "500.00", "draft")                   # drafts never count
+
+    with psycopg.connect(TEST_DB) as conn:
+        before = conn.execute("select id, status, total_sales, updated_at from daily_reports order by id").fetchall()
+
+    q = f"store_id={store['id']}"
+    m = client.get(f"/api/summaries?period=month&value=2026-07&{q}", headers=OWNER).json()
+    t = m["totals"]
+    assert (t["days"], t["fuel_sale"], t["merch_sale"], t["sales_tax"], t["total_sales"]) == (2, "3000.03", "500.30", "18.00", "3518.33")
+    assert Decimal(t["over_short"]) == Decimal("-6.11") + Decimal("7.78") and t["days_short"] == 1
+    assert Decimal(t["taxable_sale"]) + Decimal(t["nontaxable_sale"]) == Decimal(t["merch_sale"])
+    assert [r["key"] for r in m["rows"]] == ["2026-07-01", "2026-07-02"] and m["rows"][0]["report_id"]
+    assert m["label"] == "July 2026"
+
+    qtr = client.get(f"/api/summaries?period=quarter&value=2026-Q3&{q}", headers=OWNER).json()
+    assert [(r["key"], r["days"]) for r in qtr["rows"]] == [("2026-07", 2), ("2026-08", 0), ("2026-09", 0)]
+    assert qtr["totals"]["total_sales"] == "3518.33"
+    with_sub = client.get(f"/api/summaries?period=quarter&value=2026-Q3&include=submitted&{q}", headers=OWNER).json()
+    assert with_sub["totals"]["days"] == 3 and with_sub["totals"]["days_unreviewed"] == 1
+    assert with_sub["totals"]["total_sales"] == str(Decimal("3518.33") + Decimal("3418.33"))
+    yr = client.get(f"/api/summaries?period=year&value=2026&{q}", headers=OWNER).json()
+    assert len(yr["rows"]) == 12 and yr["totals"]["days"] == 2
+
+    csv_text = client.get(f"/api/summaries/csv?period=month&value=2026-07&{q}", headers=OWNER).text
+    assert "2026-07-01" in csv_text and "3518.33" in csv_text
+
+    # owner only, and bad periods are refused clearly
+    assert client.get(f"/api/summaries?period=month&value=2026-07&{q}", headers=emp).status_code == 403
+    assert client.get("/api/summaries?period=quarter&value=2026-Q5", headers=OWNER).status_code == 400
+    assert client.get("/api/summaries?period=month&value=2026-13", headers=OWNER).status_code == 400
+
+    # read-only: nothing in the worksheets changed
+    with psycopg.connect(TEST_DB) as conn:
+        assert conn.execute("select id, status, total_sales, updated_at from daily_reports order by id").fetchall() == before
+
 def test_employee_needs_a_store(client):
     no_store = {"email": "nostore@example.com", "role": "employee", "store_ids": []}
     r = client.post("/api/people", json=no_store, headers=OWNER)

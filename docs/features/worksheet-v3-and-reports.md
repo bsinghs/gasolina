@@ -1,6 +1,6 @@
 # Feature spec: owner's Oct 8 worksheet (v3) and reports
 
-_Status: **phase 1 done (Oct 8)**, phase 2 next · Oct 8, 2026 · From the owner's edited copy of the worksheet preview_
+_Status: **phases 1 and 2 done (Oct 8)**, phase 3 later · Oct 8, 2026 · From the owner's edited copy of the worksheet preview_
 
 The owner (with an AI's help) turned the shared worksheet preview into a small bookkeeping app: **Daily**, **Reports** (Monthly, Yearly, Profit & Loss, Balance Sheet, Inventory) and **Vendors**. His file is a stand-alone page that keeps data in the browser; we build the same ideas into Shift Close, on our database, with the API doing the math.
 
@@ -39,7 +39,7 @@ The owner (with an AI's help) turned the shared worksheet preview into a small b
 - [x] Vendor names suggested on paid-out lines.
 - [x] Tests for tanks and payees (incl. permissions).
 
-## Phase 2: Monthly and Yearly (next)
+## Phase 2: Monthly, Quarterly, Yearly (done Oct 8)
 See [monthly-reports.md](monthly-reports.md). His version adds per-month totals of taxable / non-taxable, gallons and net over/short, and a yearly table by month (tap a month for its days). Owner only.
 
 ## Phase 3: Profit & Loss, Balance Sheet, Vendors (later, bigger)

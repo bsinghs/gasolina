@@ -35,6 +35,7 @@ export function Layout() {
           {isOwner && <NavLink to="/review" className={link}>Review</NavLink>}
           <NavLink to="/worksheet" className={link}>Worksheet</NavLink>
           {!isOwner && <NavLink to="/my" className={link}>My days</NavLink>}
+          {isOwner && <NavLink to="/reports" className={link}>Reports</NavLink>}
           {isOwner && <NavLink to="/export" className={link}>Export</NavLink>}
           {isOwner && <NavLink to="/people" className={link}>People</NavLink>}
           {isOwner && <NavLink to="/settings" className={link}>Settings</NavLink>}
