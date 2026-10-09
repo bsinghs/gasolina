@@ -33,7 +33,7 @@ Every step is written to `audit_log` with who did it and when, and shows as Hist
 | employee | Fill and submit worksheets for their assigned stores; edit while draft or sent back |
 | manager | Same as employee, for all their stores (room to grow into first-pass review) |
 | owner | Everything: review, approve, send back, reopen, export, people, stores, settings, books, inventory |
-| coowner | Same as owner, except only the owner (or app admin) adds, changes or removes owners and co-owners |
+| coowner | Sees everything the owner sees, changes nothing (view only, enforced by the API) |
 
 ## Data model
 

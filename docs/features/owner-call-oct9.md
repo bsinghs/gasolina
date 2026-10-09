@@ -7,7 +7,7 @@ Four changes, built one at a time in this order, plus a **Future** section for t
 | # | Change | Who sees it |
 | --- | --- | --- |
 | 1 | **My days** shows fuel and merchandise sales per day, month totals, "show older days", and the time each day was submitted | Employees, managers (submit time also on the owner's Review list) |
-| 2 | **Co-owner** role: same powers as the owner | Owner gives it on People |
+| 2 | **Co-owner** role: sees everything the owner sees, **changes nothing** | Owner gives it on People |
 | 3 | **Inventory** page (fuel tanks + merchandise): bought vs sold, % full, when to order. Home page for owner and co-owner | Owner, co-owner |
 | 4 | **Vendor dropdown** on paid outs: searchable list the owner keeps, or **Miscellaneous** with a note | Everyone filling a worksheet; owner sorts out the notes |
 
@@ -38,21 +38,24 @@ Principles (as always): add-only database changes, math in pure functions with u
 - [x] "Show 30 more days" goes back until nothing is left; an employee never sees another store's days.
 - [x] Submit time on My days and Review.
 
-## 2. Co-owner
+## 2. Co-owner (view only)
 
-**Problem.** The owner has a partner who should see and do everything the owner can.
+**Problem.** The owner has a partner who should be able to see everything the owner sees.
 
-**Rule.** New role **`coowner`** ("Co-owner"). Same powers as the owner everywhere (reviews, reports, books, inventory, settings, people), with one safety rule:
-- **Only the owner** (or the app admin) can add, change or remove an **owner or co-owner**. A co-owner can manage employees and managers. So a co-owner can never lock the owner out.
-- Like owners, a co-owner sees all stores (no store list needed) and can't remove their own access.
+**Rule (owner, Oct 9): co-owners can look but never change anything.** New role **`coowner`** ("Co-owner"):
+- Sees every owner screen with information: Inventory (home), Review and each day, Reports (Sales, P&L, Balance Sheet, Vendors), all stores.
+- **Can't change anything**: no approving or sending back, no worksheets, deliveries, purchases, expenses, balances, vendors, people, stores, settings or exports. The API refuses every change from a co-owner (any request that isn't a read), the same way the admin's View as works. The screens hide those buttons and show a "View only" bar; Worksheet, Export, People and Settings aren't in a co-owner's menu.
+- Only the owner (or the app admin) adds, changes or removes owners and co-owners.
+
+_First built Oct 9 with full owner powers; changed the same day to view only after Bhajan confirmed the owner's intent._
 
 **Data.** Migration 008 widens the role check to include `coowner` (add-only: no row changes).
-**Code.** `CurrentUser.is_owner` (API) and `hasOwnerAccess()` (web) include `coowner`; `CurrentUser.is_full_owner` (owner or admin) guards the People rule above.
+**Code.** `current_user` (API) refuses non-GET requests from a co-owner; `CurrentUser.is_owner` / `hasOwnerAccess()` include `coowner` for reading; `useViewOnly()` (web) hides buttons; `CurrentUser.is_full_owner` (owner or admin) guards managing owners.
 
 **Acceptance.**
-- [x] Co-owner can do everything the owner can (tested on Review, Reports, Books, Inventory, Settings).
-- [x] Co-owner can add an employee but not an owner or co-owner, and can't edit or delete the owner.
-- [x] Co-owner shows as "Co-owner" on People and in the admin's View as list.
+- [x] Co-owner can open every owner information screen (tested: reports, review, books, balance, settings read, people read, vendors, inventory, history).
+- [x] Every change is refused with a clear message (tested on 14 kinds of change, nothing saved).
+- [x] Co-owner shows as "Co-owner" on People and in the admin's View as list; screens show "View only" and no edit buttons.
 
 ## 3. Inventory (fuel + merchandise), the owner's home page
 

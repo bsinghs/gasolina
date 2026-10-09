@@ -109,37 +109,51 @@ def test_review_list_has_submit_time(client, world):
 
 # ---------- 2. Co-owner ----------
 
-def test_coowner_has_owner_powers(client, world):
+def test_coowner_sees_everything_the_owner_sees(client, world):
     me = ok(client.get("/api/me", headers=CO))
     assert me["role"] == "coowner" and len(me["stores"]) == 2
     for path in ["/api/reports?status=submitted", "/api/summaries?period=month&value=2026-08", "/api/books/pnl?month=2026-08",
-                 "/api/settings", "/api/people", "/api/vendors", "/api/inventory?month=2026-08", "/api/vendors/miscellaneous"]:
+                 "/api/books/balance?month=2026-08", "/api/settings", "/api/people", "/api/vendors", "/api/inventory?month=2026-08",
+                 "/api/vendors/miscellaneous", "/api/reports/history?until=2026-08-31"]:
         assert client.get(path, headers=CO).status_code == 200, path
-    waiting = ok(client.get("/api/reports?status=submitted", headers=CO))
-    assert ok(client.post(f"/api/reports/{waiting[0]['id']}/approve", json={}, headers=CO))["status"] == "approved"
-    # People list shows the role; admins stay hidden
     people = {p["email"]: p for p in ok(client.get("/api/people", headers=CO))}
     assert people["co@example.com"]["role"] == "coowner" and "admin@example.com" not in people
 
 
-def test_only_the_owner_manages_owners_and_coowners(client, world):
+def test_coowner_cannot_change_anything(client, world):
+    """Owner's rule (Oct 9): co-owners only look. Every change is refused, whatever the page."""
     a = world["a"]
     owner_id = next(p["id"] for p in ok(client.get("/api/people", headers=OWNER)) if p["email"] == "owner@example.com")
     co_id = next(p["id"] for p in ok(client.get("/api/people", headers=OWNER)) if p["email"] == "co@example.com")
-    # co-owner can add / edit staff
-    new = ok(client.post("/api/people", json={"email": "staff2@example.com", "store_ids": [a["id"]]}, headers=CO))
-    ok(client.patch(f"/api/people/{new['id']}", json={"email": "staff2@example.com", "name": "Sam", "role": "manager", "store_ids": [a["id"]]}, headers=CO))
-    # … but not owners or co-owners
-    assert client.post("/api/people", json={"email": "x@example.com", "role": "coowner"}, headers=CO).status_code == 403
-    assert client.post("/api/people", json={"email": "y@example.com", "role": "owner"}, headers=CO).status_code == 403
-    assert client.patch(f"/api/people/{new['id']}", json={"email": "staff2@example.com", "role": "owner"}, headers=CO).status_code == 403
-    assert client.patch(f"/api/people/{owner_id}", json={"email": "owner@example.com", "role": "employee", "store_ids": [a["id"]]}, headers=CO).status_code == 403
-    assert client.patch(f"/api/people/{owner_id}", json={"email": "owner@example.com", "role": "owner", "active": False}, headers=CO).status_code == 403
-    assert client.delete(f"/api/people/{owner_id}", headers=CO).status_code == 403
-    # can change own name, not own role
-    assert ok(client.patch(f"/api/people/{co_id}", json={"email": "co@example.com", "name": "Cora P", "role": "coowner"}, headers=CO))["name"] == "Cora P"
-    assert client.patch(f"/api/people/{co_id}", json={"email": "co@example.com", "role": "owner"}, headers=CO).status_code == 400
-    # the owner can
+    waiting = ok(client.get("/api/reports?status=submitted", headers=CO))
+    rid = waiting[0]["id"]
+    attempts = [
+        ("post", f"/api/reports/{rid}/approve", {}),
+        ("post", f"/api/reports/{rid}/return", {"note": "x"}),
+        ("put", "/api/reports", {"store_id": a["id"], "business_date": "2026-08-15", "fuel_sale": "1.00"}),
+        ("post", "/api/people", {"email": "staff2@example.com", "store_ids": [a["id"]]}),
+        ("patch", f"/api/people/{owner_id}", {"email": "owner@example.com", "role": "owner", "active": False}),
+        ("patch", f"/api/people/{co_id}", {"email": "co@example.com", "name": "Cora P", "role": "coowner"}),
+        ("delete", f"/api/people/{owner_id}", None),
+        ("post", "/api/vendors", {"name": "Nope", "kind": "expense"}),
+        ("post", "/api/books/entries", {"month": "2026-08", "category": "expense", "description": "x", "amount": "1.00"}),
+        ("put", "/api/books/balance", {"month": "2026-08", "lines": []}),
+        ("post", "/api/stores", {"name": "New store"}),
+        ("patch", f"/api/stores/{a['id']}", {"name": "Renamed"}),
+        ("put", "/api/settings", {}),
+        ("post", "/api/exports/quickbooks", {"date_from": "2026-08-01", "date_to": "2026-08-31", "include_already_exported": False}),
+    ]
+    for method, path, body in attempts:
+        r = client.request(method.upper(), path, json=body, headers=CO)
+        assert r.status_code == 403, (method, path, r.status_code)
+        assert "can't make changes" in r.json()["detail"]
+    # nothing changed
+    assert ok(client.get(f"/api/reports/{rid}", headers=OWNER))["status"] == "submitted"
+    assert ok(client.get("/api/vendors", headers=OWNER)) == [] or all(v["name"] != "Nope" for v in ok(client.get("/api/vendors", headers=OWNER)))
+
+
+def test_only_the_owner_manages_owners_and_coowners(client, world):
+    co_id = next(p["id"] for p in ok(client.get("/api/people", headers=OWNER)) if p["email"] == "co@example.com")
     tmp = ok(client.post("/api/people", json={"email": "co2@example.com", "role": "coowner"}, headers=OWNER))
     assert ok(client.delete(f"/api/people/{tmp['id']}", headers=OWNER))["ok"]
     # admin's View as lists the co-owner, and viewing as them is read-only
@@ -194,7 +208,7 @@ def september(client, world):
     day(client, a, "2026-09-04", fuel="1.00", gallons="1", tanks={T1: "1", T2: "1"}, submit=False)   # draft: ignored
     delivery = ok(client.post("/api/books/entries", json={
         "store_id": a["id"], "category": "fuel_purchase", "description": "Reed Oil load, inv 5521", "amount": "10000.00",
-        "vendor_id": vendors["Reed Oil"]["id"], "entry_date": "2026-09-02", "tank": T1, "gallons": "4000"}, headers=CO))
+        "vendor_id": vendors["Reed Oil"]["id"], "entry_date": "2026-09-02", "tank": T1, "gallons": "4000"}, headers=OWNER))
     ok(client.post("/api/books/entries", json={
         "store_id": a["id"], "category": "merchandise_purchase", "description": "McLane order", "amount": "300.00",
         "vendor_id": vendors["McLane"]["id"], "entry_date": "2026-09-02"}, headers=OWNER))

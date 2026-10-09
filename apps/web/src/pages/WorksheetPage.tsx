@@ -6,6 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { hasOwnerAccess, type PaidOut, type Report, type VendorName } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { useViewOnly } from "../lib/access";
 import { Notice } from "../components/Notice";
 import { PaidOutLines } from "../components/PaidOutLines";
 import { StatusChip } from "../components/StatusChip";
@@ -79,7 +80,8 @@ export function WorksheetPage() {
 
   const isOwner = hasOwnerAccess(me?.role);
   const status = report?.status ?? "draft";
-  const editable = !me?.viewed_by_name && (status === "draft" || status === "returned" || (isOwner && status === "submitted"));
+  const viewOnly = useViewOnly();
+  const editable = !viewOnly && (status === "draft" || status === "returned" || (isOwner && status === "submitted"));
   const taxRate = parseFloat(me?.sales_tax_rate ?? "0.06") || 0.06;
   const taxPct = `${+(taxRate * 100).toFixed(2)}%`;
   const totals = calculate(form, taxRate);
@@ -214,6 +216,7 @@ export function WorksheetPage() {
         <Notice kind="info">
           {me.viewed_by_name
             ? "You're viewing as this person: read-only."
+            : me.role === "coowner" ? "View only: co-owners can see worksheets but not change them."
             : <>This day is {status}. It can't be changed{isOwner ? " unless you reopen it from the review screen" : ""}.</>}
         </Notice>
       )}

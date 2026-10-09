@@ -7,6 +7,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { Inventory, StoreInventory, TankStatus, Vendor } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { useViewOnly } from "../lib/access";
 import { Notice } from "../components/Notice";
 import { prettyDate, today } from "../lib/dates";
 import { money, parseAmount } from "../lib/money";
@@ -47,7 +48,7 @@ export function InventoryPage() {
   const [form, setForm] = useState<Form | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
-  const readOnly = Boolean(me?.viewed_by_name);
+  const readOnly = useViewOnly();
 
   const load = useCallback(async () => {
     setLoading(true);

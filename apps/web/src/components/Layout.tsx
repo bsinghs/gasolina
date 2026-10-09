@@ -8,6 +8,7 @@ export function Layout() {
   const { me, signOut, viewAs } = useAuth();
   const navigate = useNavigate();
   const isOwner = hasOwnerAccess(me?.role);
+  const isCoowner = me?.role === "coowner"; // view only: info screens, no changes
   const link = ({ isActive }: { isActive: boolean }) => (isActive ? "active" : "");
   const options = me?.view_as_options ?? null; // only the app admin gets these
   const viewing = Boolean(me?.viewed_by_name);
@@ -29,17 +30,20 @@ export function Layout() {
           <button className="btn btn-sm" onClick={() => switchTo("")}>Back to me</button>
         </div>
       )}
+      {isCoowner && !viewing && (
+        <div className="viewas-bar" role="status"><span><strong>View only.</strong> Co-owners can see everything but can&apos;t change anything.</span></div>
+      )}
       <header className="topbar">
         <NavLink to="/" className="brand">Shift Close</NavLink>
         <nav aria-label="Main">
           {isOwner && <NavLink to="/inventory" className={link}>Inventory</NavLink>}
           {isOwner && <NavLink to="/review" className={link}>Review</NavLink>}
-          <NavLink to="/worksheet" className={link}>Worksheet</NavLink>
+          {!isCoowner && <NavLink to="/worksheet" className={link}>Worksheet</NavLink>}
           {!isOwner && <NavLink to="/my" className={link}>My days</NavLink>}
           {isOwner && <NavLink to="/reports" className={link}>Reports</NavLink>}
-          {isOwner && <NavLink to="/export" className={link}>Export</NavLink>}
-          {isOwner && <NavLink to="/people" className={link}>People</NavLink>}
-          {isOwner && <NavLink to="/settings" className={link}>Settings</NavLink>}
+          {isOwner && !isCoowner && <NavLink to="/export" className={link}>Export</NavLink>}
+          {isOwner && !isCoowner && <NavLink to="/people" className={link}>People</NavLink>}
+          {isOwner && !isCoowner && <NavLink to="/settings" className={link}>Settings</NavLink>}
         </nav>
         <div className="who">
           {options ? (

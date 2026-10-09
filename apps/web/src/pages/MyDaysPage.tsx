@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import type { MonthTotal, ReportSummary } from "../api/types";
 import { Notice } from "../components/Notice";
+import { useViewOnly } from "../lib/access";
 import { StatusChip } from "../components/StatusChip";
 import { prettyDate, prettyTime, today } from "../lib/dates";
 import { formatOverShort, money, toCents } from "../lib/money";
@@ -34,6 +35,7 @@ function Sales({ fuel, merch, gallons }: { fuel: string; merch: string; gallons:
 }
 
 export function MyDaysPage() {
+  const viewOnly = useViewOnly();
   const [days, setDays] = useState<ReportSummary[]>([]);
   const [months, setMonths] = useState<Record<string, MonthTotal>>({});
   const [nextUntil, setNextUntil] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export function MyDaysPage() {
             <strong>{prettyDate(r.business_date)} · {r.store_name}</strong><StatusChip status="returned" />
           </div>
           <span>“{r.review_note}”</span>
-          <Link className="btn btn-dark" to={link(r)} style={{ alignSelf: "flex-start" }}>Fix and resend</Link>
+          {!viewOnly && <Link className="btn btn-dark" to={link(r)} style={{ alignSelf: "flex-start" }}>Fix and resend</Link>}
         </div>
       ))}
 

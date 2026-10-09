@@ -6,6 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import { MISCELLANEOUS, type MiscPaidOut, type Vendor, type VendorKind, type VendorSpending } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { useViewOnly } from "../lib/access";
 import { Notice } from "../components/Notice";
 import { ReportTabs } from "../components/ReportTabs";
 import { prettyDate, today } from "../lib/dates";
@@ -14,6 +15,7 @@ import { formatMoney, toCents } from "../lib/money";
 const KIND: Record<VendorKind, string> = { fuel: "Cost of goods: fuel", merchandise: "Cost of goods: merchandise", expense: "Expense" };
 
 export function VendorsPage() {
+  const viewOnly = useViewOnly();
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const period = params.get("period") === "year" ? "year" : "month";
@@ -63,14 +65,14 @@ export function VendorsPage() {
             Mark each vendor as <strong>cost of goods</strong> (fuel or merchandise you buy to sell) or <strong>expense</strong> (everything else).
             Paid outs on the daily sheets are matched by name and land in the right place on the Profit &amp; Loss.
           </p>
-          <form className="row-wrap" onSubmit={(e) => addVendor(e)}>
+          {!viewOnly && <form className="row-wrap" onSubmit={(e) => addVendor(e)}>
             <label className="label-stack" style={{ flex: 2, minWidth: 180 }}>Vendor name
               <input className="text" required maxLength={120} placeholder="e.g. Sunoco Fuel" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
             <label className="label-stack" style={{ flex: 1, minWidth: 180 }}>Type
               <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as VendorKind })}>
                 {(Object.keys(KIND) as VendorKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</select></label>
             <button className="btn btn-dark" type="submit">Add vendor</button>
-          </form>
+          </form>}
           <div className="table-wrap">
             <table style={{ minWidth: 520 }}>
               <thead><tr><th className="left">Vendor</th><th className="left">Type</th><th /></tr></thead>
@@ -79,11 +81,11 @@ export function VendorsPage() {
                   <tr key={v.id} style={v.active ? undefined : { opacity: 0.55 }}>
                     <td className="left">{v.name}{!v.active && <span className="muted"> (inactive)</span>}</td>
                     <td className="left">
-                      <select aria-label={`Type for ${v.name}`} value={v.kind} onChange={(e) => act(() => api.vendors.update(v.id, { name: v.name, kind: e.target.value as VendorKind, active: v.active }), `${v.name} changed.`)}>
+                      <select aria-label={`Type for ${v.name}`} value={v.kind} disabled={viewOnly} onChange={(e) => act(() => api.vendors.update(v.id, { name: v.name, kind: e.target.value as VendorKind, active: v.active }), `${v.name} changed.`)}>
                         {(Object.keys(KIND) as VendorKind[]).map((k) => <option key={k} value={k}>{KIND[k]}</option>)}</select>
                     </td>
                     <td>
-                      {confirmDelete === v.id ? (
+                      {viewOnly ? null : confirmDelete === v.id ? (
                         <span className="row-wrap" style={{ gap: 6, justifyContent: "flex-end" }}>
                           <button className="btn btn-danger btn-sm" onClick={() => { setConfirmDelete(null); act(() => api.vendors.remove(v.id), `${v.name} removed.`); }}>Remove</button>
                           <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(null)}>Keep</button>
@@ -124,8 +126,8 @@ export function VendorsPage() {
                       <td className="left">{m.store_name}</td>
                       <td>{formatMoney(toCents(m.amount))}<div className="stamp">{m.kind}</div></td>
                       <td className="left">{m.note ?? <span className="muted">no note</span>}</td>
-                      <td><button className="link-btn" onClick={() => { setForm({ ...form, name: (m.note ?? "").slice(0, 120) }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-                        Add as vendor…</button></td>
+                      <td>{!viewOnly && <button className="link-btn" onClick={() => { setForm({ ...form, name: (m.note ?? "").slice(0, 120) }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                        Add as vendor…</button>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -160,7 +162,7 @@ export function VendorsPage() {
           </div>
         )}
 
-        {notOnList.length > 0 && (
+        {notOnList.length > 0 && !viewOnly && (
           <Notice kind="warn">
             Paid out to vendors that aren't on the list: {notOnList.map((v) => v.vendor).join(", ")}. Add them so their payments land in the right place:
             <span className="row-wrap" style={{ gap: 6, marginTop: 8 }}>

@@ -6,6 +6,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { EntryCategory, LedgerEntry, PnlYear, ProfitAndLoss, Vendor } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { useViewOnly } from "../lib/access";
 import { Notice } from "../components/Notice";
 import { ReportTabs } from "../components/ReportTabs";
 import { Statement, type Row } from "../components/Statement";
@@ -27,6 +28,7 @@ function margin(part: string, whole: string) {
 }
 
 export function ProfitLossPage() {
+  const viewOnly = useViewOnly();
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const month = params.get("month") ?? today().slice(0, 7);
@@ -144,7 +146,7 @@ export function ProfitLossPage() {
       <section className="card">
         <div className="card-head">What you paid in {pnl?.label ?? "this month"}</div>
         <div className="card-body stack">
-          <form className="entry-form" onSubmit={submit}>
+          {!viewOnly && <form className="entry-form" onSubmit={submit}>
             <label className="label-stack">Type<select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value as EntryCategory, vendor_id: "" })}>
               {(Object.keys(CATEGORY) as EntryCategory[]).map((c) => <option key={c} value={c}>{CATEGORY[c]}</option>)}</select></label>
             <label className="label-stack">What for<input className="text" required maxLength={200} placeholder={form.category === "expense" ? "e.g. Payroll, Rent, Utilities" : "e.g. Load on Oct 3"}
@@ -162,8 +164,8 @@ export function ProfitLossPage() {
                 <option value="">All stores (shared, e.g. insurance)</option>
                 {me?.stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
             )}
-          </form>
-          {vendorChoices.length === 0 && <div className="muted">No {VENDOR_FOR[form.category] === "expense" ? "expense" : VENDOR_FOR[form.category]} vendors yet. Add them on the Vendors tab.</div>}
+          </form>}
+          {!viewOnly && vendorChoices.length === 0 && <div className="muted">No {VENDOR_FOR[form.category] === "expense" ? "expense" : VENDOR_FOR[form.category]} vendors yet. Add them on the Vendors tab.</div>}
 
           <div className="table-wrap">
             <table style={{ minWidth: 640 }}>
@@ -177,7 +179,7 @@ export function ProfitLossPage() {
                     <td className="left">{e.vendor_name ?? "—"}</td><td className="left">{e.store_name ?? "All stores"}</td>
                     <td>{formatMoney(toCents(e.amount))}</td>
                     <td>
-                      {confirmDelete === e.id ? (
+                      {viewOnly ? null : confirmDelete === e.id ? (
                         <span className="row-wrap" style={{ gap: 6, justifyContent: "flex-end" }}>
                           <button className="btn btn-danger btn-sm" onClick={() => { setConfirmDelete(null); act(() => api.books.removeEntry(e.id), "Entry removed. It's kept in the history log."); }}>Remove</button>
                           <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(null)}>Keep</button>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api/client";
+import { useViewOnly } from "../lib/access";
 import type { JournalLine, Report } from "../api/types";
 import { Notice } from "../components/Notice";
 import { StatusChip } from "../components/StatusChip";
@@ -10,6 +11,7 @@ import { prettyDate, prettyTime } from "../lib/dates";
 import { formatMoney, formatOverShort, toCents } from "../lib/money";
 
 export function DayDetailPage() {
+  const viewOnly = useViewOnly();
   const { id = "" } = useParams();
   const [report, setReport] = useState<Report | null>(null);
   const [journal, setJournal] = useState<JournalLine[]>([]);
@@ -65,7 +67,7 @@ export function DayDetailPage() {
             {report.submitted_by_name ? `Submitted by ${report.submitted_by_name} ${prettyTime(report.submitted_at)}` : "Not submitted yet"}
           </div>
         </div>
-        <div className="row-wrap">
+        {!viewOnly && <div className="row-wrap">
           {(report.status === "submitted" || report.status === "draft" || report.status === "returned") && (
             <Link className="btn btn-ghost" to={`/worksheet?store=${report.store_id}&date=${report.business_date}`}>Edit</Link>
           )}
@@ -81,7 +83,7 @@ export function DayDetailPage() {
           {(report.status === "approved" || report.status === "exported") && (
             <button className="btn btn-ghost" disabled={busy} onClick={() => act(() => api.reports.reopen(report.id))}>Reopen</button>
           )}
-        </div>
+        </div>}
       </div>
 
       {error && <Notice kind="error">{error}</Notice>}
@@ -124,7 +126,7 @@ export function DayDetailPage() {
         <section className="card">
           <div className="card-head">QuickBooks journal entry</div>
           <div className="card-body">
-            {report.status === "submitted" && cashLines.length > 0 && (
+            {!viewOnly && report.status === "submitted" && cashLines.length > 0 && (
               <div className="stack" style={{ gap: 8, padding: "10px 0" }}>
                 <span className="muted">Expense account for each cash paid out (blank = default):</span>
                 {cashLines.map((p) => (

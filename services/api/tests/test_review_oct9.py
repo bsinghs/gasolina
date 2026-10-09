@@ -81,12 +81,12 @@ def test_coowner_cannot_change_other_coowners_or_inactive_owners(client, world):
     assert client.patch(f"/api/people/{old['id']}", json={"email": "old@example.com", "role": "owner", "active": True}, headers=CO).status_code == 403
     assert client.patch(f"/api/people/{old['id']}", json={"email": "old@example.com", "role": "manager", "store_ids": [a["id"]]}, headers=CO).status_code == 403
     # co-owner can't drop or delete their own access
-    assert client.patch(f"/api/people/{co_id}", json={"email": "co@example.com", "role": "coowner", "active": False}, headers=CO).status_code == 400
-    assert client.patch(f"/api/people/{co_id}", json={"email": "co@example.com", "role": "manager", "store_ids": [a["id"]]}, headers=CO).status_code == 400
-    assert client.delete(f"/api/people/{co_id}", headers=CO).status_code == 400
+    assert client.patch(f"/api/people/{co_id}", json={"email": "co@example.com", "role": "coowner", "active": False}, headers=CO).status_code == 403
+    assert client.patch(f"/api/people/{co_id}", json={"email": "co@example.com", "role": "manager", "store_ids": [a["id"]]}, headers=CO).status_code == 403
+    assert client.delete(f"/api/people/{co_id}", headers=CO).status_code == 403
     # taking the owner's email (any case) is refused, not a 500
     emp_id = world["people"]["emp@example.com"]["id"]
-    assert client.patch(f"/api/people/{emp_id}", json={"email": "OWNER@example.com", "role": "employee", "store_ids": [a["id"]]}, headers=CO).status_code == 409
+    assert client.patch(f"/api/people/{emp_id}", json={"email": "OWNER@example.com", "role": "employee", "store_ids": [a["id"]]}, headers=OWNER).status_code == 409
     # view-as co-owner stays read-only
     view = {**ADMIN, "X-View-As": str(co_id)}
     assert client.patch(f"/api/people/{emp_id}", json={"email": "emp@example.com", "role": "employee", "store_ids": [a["id"]]}, headers=view).status_code == 403

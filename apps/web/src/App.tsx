@@ -20,6 +20,12 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { NotInvitedPage, SignInPage } from "./pages/SignInPage";
 import { WorksheetPage } from "./pages/WorksheetPage";
 
+/** Pages for changing things (export, people, settings): not for the view-only co-owner */
+function ManagersOnly({ children }: { children: ReactNode }) {
+  const { me } = useAuth();
+  return hasOwnerAccess(me?.role) && me?.role !== "coowner" ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 function OwnerOnly({ children }: { children: ReactNode }) {
   const { me } = useAuth();
   return hasOwnerAccess(me?.role) ? <>{children}</> : <Navigate to="/worksheet" replace />;
@@ -47,9 +53,9 @@ export function App() {
         <Route path="/reports/pnl" element={<OwnerOnly><ProfitLossPage /></OwnerOnly>} />
         <Route path="/reports/balance" element={<OwnerOnly><BalanceSheetPage /></OwnerOnly>} />
         <Route path="/reports/vendors" element={<OwnerOnly><VendorsPage /></OwnerOnly>} />
-        <Route path="/export" element={<OwnerOnly><ExportPage /></OwnerOnly>} />
-        <Route path="/people" element={<OwnerOnly><PeoplePage /></OwnerOnly>} />
-        <Route path="/settings" element={<OwnerOnly><SettingsPage /></OwnerOnly>} />
+        <Route path="/export" element={<ManagersOnly><ExportPage /></ManagersOnly>} />
+        <Route path="/people" element={<ManagersOnly><PeoplePage /></ManagersOnly>} />
+        <Route path="/settings" element={<ManagersOnly><SettingsPage /></ManagersOnly>} />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Route>
     </Routes>

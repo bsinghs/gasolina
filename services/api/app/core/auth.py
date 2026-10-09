@@ -16,7 +16,7 @@ from app.core import db
 from app.core.config import get_settings
 
 
-OWNER_ROLES = ("owner", "coowner", "admin")  # roles with owner powers (see all stores, review, books)
+OWNER_ROLES = ("owner", "coowner", "admin")  # see all stores, review, books. Co-owners are view-only (current_user)
 
 
 @dataclass
@@ -36,7 +36,7 @@ class CurrentUser:
 
     @property
     def is_owner(self) -> bool:
-        """Has owner powers: the business owner, a co-owner, or an app admin."""
+        """Sees what the owner sees: the business owner, a co-owner (view only), or an app admin."""
         return self.role in OWNER_ROLES
 
     @property
@@ -154,6 +154,9 @@ def current_user(
     user = _signed_in_user(authorization, x_dev_email)
     if x_view_as:
         return _view_as(user, x_view_as, request.method)
+    if user.role == "coowner" and request.method.upper() not in READ_ONLY_METHODS:
+        # Co-owners see everything the owner sees, but can't change anything (owner's rule, Oct 9)
+        raise HTTPException(status_code=403, detail="Co-owners can view everything but can't make changes. Ask the owner.")
     return user
 
 

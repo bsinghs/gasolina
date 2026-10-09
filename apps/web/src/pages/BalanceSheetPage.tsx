@@ -7,6 +7,7 @@ import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { BalanceLineInput, BalanceSection, BalanceSheet } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { useViewOnly } from "../lib/access";
 import { Notice } from "../components/Notice";
 import { ReportTabs } from "../components/ReportTabs";
 import { Statement, type Row } from "../components/Statement";
@@ -27,6 +28,7 @@ let nextKey = 1;
 const withKeys = (lines: BalanceLineInput[]): EditLine[] => lines.map((l) => ({ ...l, key: nextKey++ }));
 
 export function BalanceSheetPage() {
+  const viewOnly = useViewOnly();
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const month = params.get("month") ?? today().slice(0, 7);
@@ -113,7 +115,7 @@ export function BalanceSheetPage() {
         </div>
       )}
 
-      <section className="card">
+      {!viewOnly && <section className="card">
         <div className="card-head">Balances at the end of {sheet?.label ?? "the month"}</div>
         <div className="card-body stack">
           {empty && (
@@ -137,9 +139,9 @@ export function BalanceSheetPage() {
             </div>
           ))}
         </div>
-      </section>
+      </section>}
 
-      {dirty && (
+      {dirty && !viewOnly && (
         <div className="save-bar" role="status">
           <span>You have changes that aren't saved yet.</span>
           <span className="row-wrap" style={{ gap: 8 }}>
