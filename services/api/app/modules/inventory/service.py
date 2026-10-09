@@ -67,11 +67,12 @@ def _fuel(conn: Connection, store: dict, first: date, last: date, reorder: int, 
         start = window[0] + timedelta(days=1)
         pump = db.fetch_one(
             conn,
-            """select coalesce(sum(gallons), 0) as g from daily_reports
+            """select coalesce(sum(gallons), 0) as g, count(*) as days from daily_reports
                where store_id = %s and business_date between %s and %s and status = any(%s)""",
             [store["id"], start, window[1], READING_STATUSES],
-        )["g"]
-        check = asdict(math.pump_check(window, start, pump, tanks))
+        )
+        missing = (window[1] - start).days + 1 - pump["days"]
+        check = asdict(math.pump_check(window, start, pump["g"], tanks, days_missing=missing))
 
     sold = db.fetch_one(
         conn,

@@ -159,14 +159,17 @@ class PumpCheck:
     tank_gallons: Decimal           # used by tank readings
     difference: Decimal             # tank - pump: more used than sold = possible loss
     difference_percent: Decimal | None
+    days_missing: int = 0           # days in the window with no counted worksheet (their pump gallons are unknown)
 
 
-def pump_check(window: tuple[date, date], first_day: date, pump_gallons: Decimal, tanks: list[TankResult]) -> PumpCheck:
+def pump_check(window: tuple[date, date], first_day: date, pump_gallons: Decimal, tanks: list[TankResult],
+               days_missing: int = 0) -> PumpCheck:
+    """When days are missing (no worksheet, or sent back) the pump total is short, so the difference isn't a loss."""
     tank_gallons = gal(sum((t.used for t in tanks), ZERO))
     pump = gal(pump_gallons)
     diff = gal(tank_gallons - pump)
     return PumpCheck(first_day=first_day, last_day=window[1], pump_gallons=pump, tank_gallons=tank_gallons,
-                     difference=diff, difference_percent=pct(diff, pump))
+                     difference=diff, difference_percent=pct(diff, pump), days_missing=days_missing)
 
 
 @dataclass

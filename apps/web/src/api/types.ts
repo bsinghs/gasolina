@@ -273,7 +273,7 @@ export interface StoreInventory {
   fuel: {
     tanks: TankStatus[];
     grades: GradeTotal[];
-    pump_check: { first_day: string; last_day: string; pump_gallons: string; tank_gallons: string; difference: string; difference_percent: string | null } | null;
+    pump_check: { first_day: string; last_day: string; pump_gallons: string; tank_gallons: string; difference: string; difference_percent: string | null; days_missing: number } | null;
     money: { sales: string; gallons_sold: string; price_per_gallon: string | null; delivered_cost: string; gallons_costed: string;
              cost_per_gallon: string | null; margin_per_gallon: string | null };
     deliveries: FuelDelivery[];

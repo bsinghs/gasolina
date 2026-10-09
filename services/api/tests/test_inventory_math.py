@@ -84,6 +84,7 @@ def test_grades_and_pump_check():
     assert window == (date(2026, 8, 31), date(2026, 9, 3))
     c = pump_check(window, date(2026, 9, 1), D("3350.0"), two)
     assert (c.tank_gallons, c.pump_gallons, c.difference, c.difference_percent) == (D("3450.0"), D("3350.0"), D("100.0"), D("3.0"))
+    assert c.days_missing == 0 and pump_check(window, date(2026, 9, 1), D("2000"), two, days_missing=1).days_missing == 1
     # different reading days → no comparison
     assert common_window([regular(), premium(before=None)]) is None
     assert common_window([regular(before=None, readings=[])]) is None

@@ -243,6 +243,7 @@ def test_inventory_worked_example(client, world, september):
     c = s["fuel"]["pump_check"]
     assert (c["first_day"], c["last_day"], c["pump_gallons"], c["tank_gallons"], c["difference"], c["difference_percent"]) == \
            ("2026-09-01", "2026-09-03", "3350.0", "3450.0", "100.0", "3.0")
+    assert c["days_missing"] == 0
     m = s["fuel"]["money"]
     assert (m["sales"], m["gallons_sold"], m["price_per_gallon"], m["cost_per_gallon"], m["margin_per_gallon"]) == \
            ("10100.00", "3350.0", "3.015", "2.500", "0.515")
