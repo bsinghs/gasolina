@@ -4,6 +4,7 @@ import { AUTH_MODE, useAuth } from "../auth/AuthProvider";
 // People created by `make demo` (services/api/scripts/seed_demo.py)
 const DEMO_PEOPLE = [
   { label: "Owner", email: "owner@example.com" },
+  { label: "Co-owner", email: "coowner@example.com" },
   { label: "Employee · Route 9", email: "employee1@example.com" },
   { label: "Employee · Main Street", email: "employee2@example.com" },
 ];

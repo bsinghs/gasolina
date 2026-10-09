@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import type { AppSettings, QbAccounts, Store } from "../api/types";
+import { GRADES, type AppSettings, type Grade, type QbAccounts, type Store, type TankSpec } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { IS_TEST } from "../lib/env";
 import { Notice } from "../components/Notice";
@@ -23,7 +23,7 @@ export function SettingsPage() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [editTanks, setEditTanks] = useState<{ id: string; text: string } | null>(null);
+  const [editTanks, setEditTanks] = useState<{ id: string; tanks: TankSpec[] } | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [taxPct, setTaxPct] = useState("6");
   const [newStore, setNewStore] = useState({ name: "", qb_location: "" });
@@ -55,6 +55,10 @@ export function SettingsPage() {
   const saveSettings = (e: FormEvent) => {
     e.preventDefault();
     const rate = parseFloat(taxPct) / 100;
+    if (settings && !(settings.reorder_percent >= 1 && settings.reorder_percent <= 90)) {
+      setMessage({ kind: "error", text: "\"Order soon\" must be between 1 and 90 % full." });
+      return;
+    }
     if (settings) guard(() => api.settings.save({ ...settings, sales_tax_rate: rate.toFixed(4) }), "Settings saved.");
   };
 
@@ -71,20 +75,19 @@ export function SettingsPage() {
               <span style={s.active ? undefined : { opacity: 0.5 }}>
                 {s.name}{!s.active && <span className="muted"> (deactivated)</span>}{s.qb_location ? <span className="muted"> · QB location: {s.qb_location}</span> : null}
                 {editTanks?.id === s.id ? (
-                  <span className="row-wrap" style={{ gap: 8, marginTop: 6 }}>
-                    <input className="text" style={{ minWidth: 260, flex: 1 }} aria-label={`Tanks at ${s.name}, separated by commas`}
-                      value={editTanks.text} onChange={(e) => setEditTanks({ id: s.id, text: e.target.value })} />
-                    <button className="btn btn-primary btn-sm" onClick={() => {
-                      const tanks = editTanks.text.split(",").map((t) => t.trim()).filter(Boolean);
+                  <TankEditor store={s.name} tanks={editTanks.tanks} onChange={(tanks) => setEditTanks({ id: s.id, tanks })}
+                    onCancel={() => setEditTanks(null)}
+                    onSave={() => {
+                      const tank_specs = editTanks.tanks.map((t) => ({ ...t, name: t.name.trim(), capacity: t.capacity?.trim() || null })).filter((t) => t.name);
+                      // previous_name was set when the row was loaded: a renamed tank keeps its readings and deliveries
                       setEditTanks(null);
-                      guard(() => api.stores.update(s.id, { ...s, tanks }), "Tanks saved. Past days keep the tank names they were entered with.");
-                    }}>Save tanks</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setEditTanks(null)}>Cancel</button>
-                  </span>
+                      guard(() => api.stores.update(s.id, { name: s.name, qb_location: s.qb_location, active: s.active, tank_specs }),
+                        "Tanks saved. Past days keep the tank names they were entered with.");
+                    }} />
                 ) : (
                   <span className="muted" style={{ display: "block", fontSize: 12 }}>
-                    Tanks: {(s.tanks ?? []).join(" · ") || "–"}{" "}
-                    <button className="link-btn" style={{ padding: 0, minHeight: 0, fontSize: 12 }} onClick={() => setEditTanks({ id: s.id, text: (s.tanks ?? []).join(", ") })}>Change</button>
+                    Tanks: {(s.tank_specs ?? []).map((t) => `${t.name} (${t.grade}${t.capacity ? `, ${Number(t.capacity).toLocaleString("en-US")} gal` : ""})`).join(" · ") || "–"}{" "}
+                    <button className="link-btn" style={{ padding: 0, minHeight: 0, fontSize: 12 }} onClick={() => setEditTanks({ id: s.id, tanks: s.tank_specs.map((t) => ({ ...t, previous_name: t.name })) })}>Change</button>
                   </span>
                 )}
               </span>
@@ -158,6 +161,11 @@ export function SettingsPage() {
                 onChange={(e) => setTaxPct(e.target.value)} />
             </div>
             <div className="field-row">
+              <label htmlFor="reorder">Inventory: flag a fuel tank &quot;Order soon&quot; below<span className="unit">% full</span></label>
+              <input id="reorder" className="num" inputMode="numeric" value={settings.reorder_percent}
+                onChange={(e) => setSettings({ ...settings, reorder_percent: Number(e.target.value.replace(/\D/g, "")) || 0 })} />
+            </div>
+            <div className="field-row">
               <label htmlFor="threshold">Warn when over/short is more than<span className="unit">$</span></label>
               <input id="threshold" className="num" inputMode="decimal" value={settings.over_short_alert}
                 onChange={(e) => setSettings({ ...settings, over_short_alert: e.target.value })} />
@@ -167,5 +175,36 @@ export function SettingsPage() {
         </form>
       )}
     </main>
+  );
+}
+
+/** One row per underground tank: name (as on the worksheet), fuel type, size in gallons (for % full on Inventory). */
+function TankEditor({ store, tanks, onChange, onSave, onCancel }: {
+  store: string; tanks: TankSpec[]; onChange: (t: TankSpec[]) => void; onSave: () => void; onCancel: () => void;
+}) {
+  const set = (i: number, patch: Partial<TankSpec>) => onChange(tanks.map((t, j) => (j === i ? { ...t, ...patch } : t)));
+  return (
+    <span className="stack" style={{ gap: 6, marginTop: 6, display: "flex" }}>
+      {tanks.map((t, i) => (
+        <span key={i} className="row-wrap" style={{ gap: 6 }}>
+          <input className="text" style={{ flex: 2, minWidth: 150 }} aria-label={`${store} tank ${i + 1} name`} value={t.name}
+            onChange={(e) => set(i, { name: e.target.value })} />
+          <select aria-label={`${store} tank ${i + 1} fuel type`} value={t.grade} onChange={(e) => set(i, { grade: e.target.value as Grade })}>
+            {GRADES.map((g) => <option key={g}>{g}</option>)}
+          </select>
+          <input className="num" style={{ width: 110 }} inputMode="numeric" placeholder="Size (gal)" aria-label={`${store} tank ${i + 1} size in gallons`}
+            value={t.capacity ?? ""} onChange={(e) => set(i, { capacity: e.target.value.replace(/\D/g, "") || null })} />
+          <button type="button" className="icon-btn" aria-label={`Remove ${store} tank ${i + 1}`} onClick={() => onChange(tanks.filter((_, j) => j !== i))}>✕</button>
+        </span>
+      ))}
+      <span className="row-wrap" style={{ gap: 8 }}>
+        {tanks.length < 10 && (
+          <button type="button" className="link-btn" onClick={() => onChange([...tanks, { name: `Tank ${tanks.length + 1}`, grade: "Regular", capacity: null }])}>+ Add tank</button>
+        )}
+        <button type="button" className="btn btn-primary btn-sm" onClick={onSave}>Save tanks</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={onCancel}>Cancel</button>
+      </span>
+      <span className="muted" style={{ fontSize: 12 }}>Size is the tank&apos;s capacity in gallons (on the tank chart). Needed for &quot;% full&quot; on Inventory.</span>
+    </span>
   );
 }

@@ -8,6 +8,7 @@ import { Layout } from "./components/Layout";
 import { Notice } from "./components/Notice";
 import { DayDetailPage } from "./pages/DayDetailPage";
 import { ExportPage } from "./pages/ExportPage";
+import { InventoryPage } from "./pages/InventoryPage";
 import { MyDaysPage } from "./pages/MyDaysPage";
 import { PeoplePage } from "./pages/PeoplePage";
 import { BalanceSheetPage } from "./pages/BalanceSheetPage";
@@ -32,13 +33,14 @@ export function App() {
   if (status === "not_invited") return <NotInvitedPage />;
   if (status === "error") return <main className="page"><Notice kind="error">{error}</Notice></main>;
 
-  const home = hasOwnerAccess(me?.role) ? "/review" : "/worksheet";
+  const home = hasOwnerAccess(me?.role) ? "/inventory" : "/worksheet";
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Navigate to={home} replace />} />
         <Route path="/worksheet" element={<WorksheetPage />} />
         <Route path="/my" element={<MyDaysPage />} />
+        <Route path="/inventory" element={<OwnerOnly><InventoryPage /></OwnerOnly>} />
         <Route path="/review" element={<OwnerOnly><ReviewPage /></OwnerOnly>} />
         <Route path="/days/:id" element={<OwnerOnly><DayDetailPage /></OwnerOnly>} />
         <Route path="/reports" element={<OwnerOnly><ReportsPage /></OwnerOnly>} />

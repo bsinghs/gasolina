@@ -12,12 +12,22 @@ Status = Literal["draft", "submitted", "returned", "approved", "exported"]
 Source = Literal["typed", "ai", "ai_corrected"]
 
 
+MISCELLANEOUS = "Miscellaneous"  # paid-out vendor when it's not on the owner's list; the note says what it was
+
+
 class PaidOutIn(BaseModel):
     kind: Literal["cash", "check"]
     check_no: str | None = None
     payee: str = Field(min_length=1, max_length=200)
     amount: Money = Field(ge=0, decimal_places=2, max_digits=12)
     gl_account: str | None = None
+    note: str | None = Field(default=None, max_length=300)  # for Miscellaneous: what it was and who was paid
+
+    @field_validator("note")
+    @classmethod
+    def tidy_note(cls, v: str | None) -> str | None:
+        v = " ".join(v.split()) if v else ""
+        return v or None
 
 
 class PaidOut(PaidOutIn):
@@ -115,6 +125,9 @@ class ReportSummary(BaseModel):
     store_name: str
     business_date: date
     status: Status
+    fuel_sale: Money
+    merch_sale: Money
+    gallons: Decimal
     total_sales: Money
     expected_cash: Money
     over_short: Money
@@ -122,3 +135,25 @@ class ReportSummary(BaseModel):
     submitted_at: datetime | None
     review_note: str | None
     has_ai_values: bool
+
+
+class MonthTotal(BaseModel):
+    """Totals for a whole month at one store (submitted, approved and exported days)."""
+
+    month: str  # 2026-10
+    store_id: UUID
+    store_name: str
+    days: int
+    days_short: int
+    fuel_sale: Money
+    merch_sale: Money
+    gallons: Decimal
+    over_short: Money
+
+
+class History(BaseModel):
+    """One page of the staff's My days: the days, their months' totals, and where the next page starts."""
+
+    days: list[ReportSummary]
+    months: list[MonthTotal]
+    next_until: date | None

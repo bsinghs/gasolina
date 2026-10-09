@@ -16,12 +16,15 @@ from app.core import db
 from app.core.config import get_settings
 
 
+OWNER_ROLES = ("owner", "coowner", "admin")  # roles with owner powers (see all stores, review, books)
+
+
 @dataclass
 class CurrentUser:
     id: UUID
     email: str
     name: str
-    role: str  # employee | manager | owner | admin
+    role: str  # employee | manager | owner | coowner | admin
     store_ids: list[UUID] = field(default_factory=list)
     # Set when the app admin is looking at the app as this person ("View as", read-only)
     viewed_by: "CurrentUser | None" = None
@@ -33,7 +36,12 @@ class CurrentUser:
 
     @property
     def is_owner(self) -> bool:
-        """Has owner powers: the business owner, or an app admin."""
+        """Has owner powers: the business owner, a co-owner, or an app admin."""
+        return self.role in OWNER_ROLES
+
+    @property
+    def is_full_owner(self) -> bool:
+        """May manage owners and co-owners: the owner or the app admin (not a co-owner)."""
         return self.role in ("owner", "admin")
 
     def can_access_store(self, store_id: UUID) -> bool:

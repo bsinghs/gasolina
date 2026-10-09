@@ -7,7 +7,7 @@ Status flow:  draft -> submitted -> approved -> exported
 """
 
 import json
-from datetime import date
+from datetime import date, timedelta
 from uuid import UUID
 
 from psycopg import Connection
@@ -16,7 +16,8 @@ from app.core import db
 from app.core.auth import CurrentUser
 from app.core.errors import bad_request, conflict, forbidden, not_found
 from app.modules.reports import reconciliation
-from app.modules.reports.schemas import ApproveIn, WorksheetIn
+from app.modules.books.math import vendor_key
+from app.modules.reports.schemas import MISCELLANEOUS, ApproveIn, WorksheetIn
 from app.modules.settings.router import load_settings
 
 NUMBER_FIELDS = ["fuel_sale", "merch_sale", "sales_tax", "gallons", "credit", "debit", "ebt", "cash_drop"]
@@ -104,6 +105,39 @@ def list_reports(
     return rows
 
 
+COUNTED_FOR_STAFF = ["submitted", "approved", "exported"]  # month totals on My days (not drafts / sent back)
+
+
+def history(conn: Connection, user: CurrentUser, until: date, days: int, store_id: UUID | None = None) -> dict:
+    """One page of My days: worksheets dated until-days+1 … until, totals for every month those days touch
+    (whole month, per store), and the date the next (older) page ends at, or None when nothing is older."""
+    first = until - timedelta(days=days - 1)
+    # no row cap: a page is at most 92 days x the stores the person sees
+    rows = list_reports(conn, user, store_id=store_id, date_from=first, date_to=until, limit=1_000_000)
+    months = sorted({r["business_date"].replace(day=1) for r in rows}, reverse=True)
+    where, params = ["r.status = any(%s)"], [COUNTED_FOR_STAFF]
+    if not user.is_owner:
+        where.append("r.store_id = any(%s)")
+        params.append(user.store_ids)
+    if store_id:
+        where.append("r.store_id = %s")
+        params.append(store_id)
+    totals = db.fetch_all(
+        conn,
+        f"""select to_char(date_trunc('month', r.business_date), 'YYYY-MM') as month, r.store_id, s.name as store_name,
+                   count(*) as days, count(*) filter (where r.over_short < 0) as days_short,
+                   sum(r.fuel_sale) as fuel_sale, sum(r.merch_sale) as merch_sale, sum(r.gallons) as gallons,
+                   sum(r.over_short) as over_short
+            from daily_reports r join stores s on s.id = r.store_id
+            where date_trunc('month', r.business_date)::date = any(%s) and {' and '.join(where)}
+            group by 1, 2, 3 order by 1 desc, 3""",
+        [months, *params],
+    ) if months else []
+    older = list_reports(conn, user, store_id=store_id, date_to=first - timedelta(days=1), limit=1)
+    # skip empty stretches: the next page starts at the newest older worksheet
+    return {"days": rows, "months": totals, "next_until": older[0]["business_date"] if older else None}
+
+
 def payees(conn: Connection, user: CurrentUser, store_id: UUID) -> list[str]:
     if not user.can_access_store(store_id):
         raise forbidden("You're not assigned to this store")
@@ -167,9 +201,9 @@ def save_worksheet(conn: Connection, user: CurrentUser, data: WorksheetIn) -> UU
     for i, p in enumerate(paid_outs):
         db.execute(
             conn,
-            """insert into paid_outs (report_id, kind, check_no, payee, amount, gl_account, position)
-               values (%s, %s, %s, %s, %s, %s, %s)""",
-            [report_id, p["kind"], p["check_no"], p["payee"], p["amount"], p["gl_account"], i],
+            """insert into paid_outs (report_id, kind, check_no, payee, amount, gl_account, position, note)
+               values (%s, %s, %s, %s, %s, %s, %s, %s)""",
+            [report_id, p["kind"], p["check_no"], p["payee"], p["amount"], p["gl_account"], i, p["note"]],
         )
     return report_id
 
@@ -182,6 +216,7 @@ def submit(conn: Connection, user: CurrentUser, report_id: UUID) -> None:
         raise conflict(f"This day is already {report['status']}")
     if report["total_sales"] <= 0:
         raise bad_request("Enter at least one sales amount before submitting")
+    _check_paid_out_vendors(conn, report_id)
     db.execute(
         conn,
         """update daily_reports set status = 'submitted', submitted_by = %s, submitted_at = now(),
@@ -235,6 +270,22 @@ def reopen(conn: Connection, user: CurrentUser, report_id: UUID) -> None:
 
 
 # ---------- helpers ----------
+
+def _check_paid_out_vendors(conn: Connection, report_id: UUID) -> None:
+    """Once the owner has a vendor list, every paid out names a vendor from it, or is Miscellaneous with a
+    note saying what it was. (Drafts save anything; this is checked when the day is submitted.)"""
+    active = {vendor_key(v["name"]) for v in db.fetch_all(conn, "select name from vendors where active")}
+    if not active:
+        return
+    lines = db.fetch_all(conn, "select payee, note from paid_outs where report_id = %s order by kind, position", [report_id])
+    misc = vendor_key(MISCELLANEOUS)
+    unknown = [l["payee"] for l in lines if vendor_key(l["payee"]) not in active and vendor_key(l["payee"]) != misc]
+    if unknown:
+        names = ", ".join(dict.fromkeys(unknown))
+        raise bad_request(f"Pick each paid-out vendor from the list, or choose {MISCELLANEOUS} and add a note. Not on the list: {names}")
+    if any(vendor_key(l["payee"]) == misc and not l["note"] for l in lines):
+        raise bad_request(f"Add a note to each {MISCELLANEOUS} paid out: what was it and who was paid?")
+
 
 def _locked(conn: Connection, user: CurrentUser, report_id: UUID) -> dict:
     report = db.fetch_one(conn, "select * from daily_reports where id = %s for update", [report_id])

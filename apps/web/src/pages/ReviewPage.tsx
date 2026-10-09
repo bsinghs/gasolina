@@ -9,7 +9,7 @@ import type { ReportSummary, Status } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
 import { StatusChip } from "../components/StatusChip";
-import { dateRange, daysAgo, prettyDate, today } from "../lib/dates";
+import { dateRange, daysAgo, prettyDate, prettyTime, today } from "../lib/dates";
 import { formatMoney, formatOverShort, toCents } from "../lib/money";
 
 const MISSING = "missing";
@@ -162,7 +162,8 @@ export function ReviewPage() {
                     <td>{formatMoney(toCents(r.total_sales))}</td>
                     <td>{formatMoney(toCents(r.expected_cash))}</td>
                     <td className={os < 0 ? "neg" : os > 0 ? "pos" : ""}>{formatOverShort(os)}</td>
-                    <td className="left">{r.submitted_by_name ?? "—"}</td>
+                    <td className="left">{r.submitted_by_name ?? "—"}
+                      {r.submitted_at && <div className="stamp">{prettyTime(r.submitted_at)}</div>}</td>
                     <td><StatusChip status={r.status as Status} /></td>
                   </tr>
                 );

@@ -1,6 +1,6 @@
 # Status and next steps
 
-_Last updated: Oct 8, 2026_
+_Last updated: Oct 9, 2026_
 
 ## Done
 
@@ -16,6 +16,8 @@ _Last updated: Oct 8, 2026_
 | Worksheet v3, phase 1 (Oct 8) | Owner's edited form: TRUTH logo + metallic header, gold store name, Fuel / Merch / Tax in one row, **ending inventory per tank** (tank names per store in Settings), paid-out **vendor name** suggestions. Migration 006. Spec: [features/worksheet-v3-and-reports.md](features/worksheet-v3-and-reports.md) (phases 2-3: monthly/yearly, P&L, balance sheet, vendors) | 27 API tests; laptop + phone click-through |
 | Reports: month / quarter / year (Oct 8) | Owner-only Reports tab. Read-only totals from approved days (toggle adds days waiting for review): sales, fuel + gallons, merchandise + taxable / non-taxable, PA tax, over/short; by store; day-by-day or month-by-month; Excel download. Spec: [features/monthly-reports.md](features/monthly-reports.md) | 28 API tests (sums to the cent, quarter months, toggle, owner-only, worksheets unchanged); totals cross-checked in SQL; laptop + phone |
 | Books: Vendors, Profit & Loss, Balance Sheet (Oct 8) | Owner-only, under Reports. Vendor list (cost of goods fuel / merchandise, or expense) with spending by vendor; P&L per month (sales from approved days, typed purchases / expenses, daily paid outs sorted by vendor, over/short) + year view; Balance Sheet at month end (typed lines, PA tax owed, profit to date, check). Add-only migration 007, math in pure functions, every change in history. Spec: [features/worksheet-v3-and-reports.md](features/worksheet-v3-and-reports.md) | 61 API tests (7 math unit, 12 API, 14 from independent review); 22 browser checks owner / employee / view-as / phone; P&L cross-checked in SQL |
+
+| Owner's call, Oct 8 (Oct 9) | **My days** for staff: fuel + merchandise per day, month totals, "Show 30 more days", submit time (also on Review). **Co-owner** role (owner powers; only the owner manages owners / co-owners). **Inventory** = owner / co-owner home: per tank on hand, % full, delivered, used, days left, "Order soon", pump vs tank check, price vs cost per gallon; merchandise bought vs sold; fuel deliveries typed in become fuel purchases on the P&L. **Vendor dropdown** on paid outs (searchable; Miscellaneous + note; checked on submit) and a "to sort out" list for the owner. Add-only migration 008. Spec: [features/owner-call-oct9.md](features/owner-call-oct9.md) (Future: Erie Bank feed, Reed Oil / ABL invoices) | 88 API tests (9 inventory math unit, 10 API, 8 from independent review: 4 bugs found and fixed); browser click-through owner / co-owner / employee, laptop + phone |
 
 ## Next: get it live (you)
 

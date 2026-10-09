@@ -2,14 +2,18 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import type { Person, Role, Store } from "../api/types";
+import { isOwnerLevel, ROLE_NAMES, type Person, type Role, type Store } from "../api/types";
+import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
 
 type Draft = Omit<Person, "id" | "has_signed_in">;
-const ROLE_LABEL: Record<Role, string> = { employee: "Employee", manager: "Manager", owner: "Owner", admin: "App admin (support)" };
 const BLANK: Draft = { email: "", name: "", role: "employee", active: true, store_ids: [] };
 
 export function PeoplePage() {
+  const { me } = useAuth();
+  // Owners and co-owners are managed only by the owner (or app admin), so a co-owner can't lock the owner out
+  const managesOwners = me?.role === "owner" || me?.role === "admin";
+  const canEdit = (p: Person) => p.role !== "admin" && (managesOwners || !isOwnerLevel(p.role) || p.id === me?.id);
   const [people, setPeople] = useState<Person[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [editing, setEditing] = useState<string | "new" | null>(null);
@@ -31,7 +35,7 @@ export function PeoplePage() {
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
-    if (draft.role !== "owner" && draft.active && draft.store_ids.length === 0) {
+    if (!isOwnerLevel(draft.role) && draft.active && draft.store_ids.length === 0) {
       setError("Pick at least one store for this person (owners see all stores).");
       return;
     }
@@ -84,7 +88,9 @@ export function PeoplePage() {
               <input className="text" placeholder="From their Google account" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
             <label className="label-stack">Role
               <select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as Role })}>
-                <option value="employee">Employee</option><option value="manager">Manager</option><option value="owner">Owner</option>
+                <option value="employee">Employee</option><option value="manager">Manager</option>
+                {(managesOwners || draft.role === "owner") && <option value="owner">Owner</option>}
+                {(managesOwners || draft.role === "coowner") && <option value="coowner">Co-owner (same access as the owner)</option>}
               </select></label>
           </div>
           <fieldset style={{ border: "none", padding: 0, margin: 0 }}>
@@ -97,7 +103,7 @@ export function PeoplePage() {
                 </label>
               ))}
               {pickable.length === 0 && <span className="muted">{stores.length ? "All stores are deactivated. Reactivate one" : "No stores yet. Add one"} in <a href="/settings">Settings</a> first.</span>}
-              {draft.role === "owner" && stores.length > 0 && <span className="muted">Owners see all stores.</span>}
+              {isOwnerLevel(draft.role) && stores.length > 0 && <span className="muted">Owners and co-owners see all stores.</span>}
             </div>
           </fieldset>
           <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 14 }}>
@@ -106,7 +112,7 @@ export function PeoplePage() {
           <div className="row-wrap">
             <button className="btn btn-primary" type="submit">{editing === "new" ? "Add" : "Save"}</button>
             <button className="btn btn-ghost" type="button" onClick={() => setEditing(null)}>Cancel</button>
-            {editing !== "new" && draft.role !== "admin" && (confirmDelete ? (
+            {editing !== "new" && editing !== me?.id && draft.role !== "admin" && (confirmDelete ? (
               <span className="row-wrap" style={{ gap: 8, alignItems: "center", marginLeft: "auto" }}>
                 <span className="muted">Delete permanently?</span>
                 <button className="btn btn-danger btn-sm" type="button" onClick={remove}>Yes, delete</button>
@@ -128,14 +134,15 @@ export function PeoplePage() {
               <tr key={p.id} style={p.active ? undefined : { opacity: 0.5 }}>
                 <td className="left">{p.name}</td>
                 <td className="left">{p.email}</td>
-                <td className="left">{ROLE_LABEL[p.role] ?? p.role}</td>
-                <td className="left">{p.role === "owner" || p.role === "admin" ? "All"
+                <td className="left">{ROLE_NAMES[p.role] ?? p.role}</td>
+                <td className="left">{isOwnerLevel(p.role) || p.role === "admin" ? "All"
                   : p.store_ids.length ? p.store_ids.map(storeName).join(", ")
                   : <span className="neg">No store: Edit to add one</span>}</td>
                 <td>{!p.active ? "Deactivated" : p.has_signed_in ? "Active" : "Invited"}</td>
                 <td>{p.role === "admin"
                   ? <span className="muted" title="Runs the app and helps with support. Set up by the app, not on this page.">Managed by app</span>
-                  : <button className="link-btn" onClick={() => startEdit(p)}>Edit</button>}</td>
+                  : canEdit(p) ? <button className="link-btn" onClick={() => startEdit(p)}>Edit</button>
+                  : <span className="muted" title="Only the owner can change owners and co-owners">Owner only</span>}</td>
               </tr>
             ))}
           </tbody>

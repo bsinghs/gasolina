@@ -302,3 +302,39 @@ tr.row-on td { background: var(--blue-bg); }
 .stat { min-width: 0; }
 .stat .v { overflow-wrap: anywhere; }
 @media (max-width: 560px) { .stat .v { font-size: 22px; } }
+
+/* Oct 9: small light text (submit time, sub-lines) */
+.small { font-size: 12px; }
+.stamp { font-size: 11px; color: var(--ink-soft); opacity: 0.8; margin-top: 2px; white-space: nowrap; }
+table.my-days td { vertical-align: top; }
+tr.month-total td { background: var(--paper); font-weight: 600; }
+
+/* Inventory: % full bar */
+.fullbar-wrap { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; white-space: nowrap; }
+.fullbar { position: relative; display: inline-block; width: 100px; height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.fullbar-fill { position: absolute; inset: 0 auto 0 0; background: var(--good); border-radius: 5px; }
+.fullbar-fill.warn { background: var(--amber); }
+.fullbar-label { font-size: 12px; font-weight: 700; color: var(--ink); }
+.fullbar-label.warn { color: var(--amber-deep); }
+.stat-warn { border-color: #fbd38d; background: var(--amber-bg); }
+
+/* Vendor dropdown on paid-out lines */
+.vendor-picker { position: relative; }
+.vendor-picker input { width: 100%; }
+.vendor-picker input.input-warn { border-color: var(--amber); background: var(--amber-bg); }
+.vendor-options { position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 2px); max-height: 240px; overflow-y: auto; margin: 0; padding: 4px 0; list-style: none; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(26, 54, 93, 0.15); }
+.vendor-options li { padding: 9px 12px; font-size: 15px; cursor: pointer; }
+.vendor-options li.on, .vendor-options li:hover { background: var(--blue-bg); }
+.vendor-options li.misc { border-top: 1px solid var(--line); color: var(--ink-2); font-style: italic; }
+.vendor-options li.vendor-empty { color: var(--ink-soft); cursor: default; font-size: 13px; }
+.field-warn { font-size: 12px; color: var(--amber-deep); margin-top: 2px; }
+.line-note { padding: 0 0 6px; }
+.line-note input { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; background: #fff; }
+.line-note input.input-warn { border-color: var(--amber); background: var(--amber-bg); }
+.line-item { align-items: flex-start; }
+.sales-cell { line-height: 1.35; white-space: nowrap; }
+table.my-days td.left { white-space: normal; }
+table.my-days td.left .stamp { white-space: normal; }
+@media (max-width: 480px) {
+  table.my-days td, table.my-days th { padding: 9px 7px; font-size: 13px; }
+}

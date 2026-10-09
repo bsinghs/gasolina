@@ -1,9 +1,14 @@
 // Shapes returned by the API. Money comes back as strings like "1234.50" to avoid rounding errors.
 
-export type Role = "employee" | "manager" | "owner" | "admin";
+export type Role = "employee" | "manager" | "owner" | "coowner" | "admin";
 
-/** Owner powers: the business owner, or the app admin (support). */
-export const hasOwnerAccess = (role: Role | string | undefined) => role === "owner" || role === "admin";
+/** Owner powers: the business owner, a co-owner, or the app admin (support). */
+export const hasOwnerAccess = (role: Role | string | undefined) => role === "owner" || role === "coowner" || role === "admin";
+/** Sees all stores (no store list needed): owner and co-owner */
+export const isOwnerLevel = (role: Role | string | undefined) => role === "owner" || role === "coowner";
+export const ROLE_NAMES: Record<Role, string> = {
+  employee: "Employee", manager: "Manager", owner: "Owner", coowner: "Co-owner", admin: "App admin (support)",
+};
 export type Status = "draft" | "submitted" | "returned" | "approved" | "exported";
 export type PaidOutKind = "cash" | "check";
 
@@ -25,6 +30,7 @@ export interface Store {
   qb_location: string | null;
   active: boolean;
   tanks: string[]; // underground fuel tanks, in reading order
+  tank_specs: TankSpec[]; // same tanks with fuel type and capacity
 }
 
 export interface Person {
@@ -44,7 +50,11 @@ export interface PaidOut {
   payee: string;
   amount: string;
   gl_account: string | null;
+  note?: string | null; // Miscellaneous: what it was and who was paid
 }
+
+/** Paid-out vendor when it's not on the owner's list (needs a note) */
+export const MISCELLANEOUS = "Miscellaneous";
 
 export interface WorksheetInput {
   store_id: string;
@@ -102,6 +112,9 @@ export interface ReportSummary {
   store_name: string;
   business_date: string;
   status: Status;
+  fuel_sale: string;
+  merch_sale: string;
+  gallons: string;
   total_sales: string;
   expected_cash: string;
   over_short: string;
@@ -109,6 +122,25 @@ export interface ReportSummary {
   submitted_at: string | null;
   review_note: string | null;
   has_ai_values: boolean;
+}
+
+/** Whole-month totals for one store on My days (submitted, approved and exported days) */
+export interface MonthTotal {
+  month: string; // 2026-10
+  store_id: string;
+  store_name: string;
+  days: number;
+  days_short: number;
+  fuel_sale: string;
+  merch_sale: string;
+  gallons: string;
+  over_short: string;
+}
+
+export interface History {
+  days: ReportSummary[];
+  months: MonthTotal[];
+  next_until: string | null; // where the next (older) page ends; null = nothing older
 }
 
 export interface JournalLine {
@@ -132,6 +164,7 @@ export interface QbAccounts {
 export interface AppSettings {
   over_short_alert: string;
   sales_tax_rate: string;
+  reorder_percent: number; // Inventory: tank below this % full = "Order soon"
   qb_accounts: QbAccounts;
 }
 
@@ -195,14 +228,67 @@ export interface LedgerEntry {
   vendor_id: string | null;
   vendor_name: string | null;
   amount: string;
+  entry_date: string | null; // the day it was delivered / bought
+  tank: string | null; // fuel deliveries only
+  gallons: string | null;
 }
 export interface EntryInput {
-  month: string; // 2026-10
+  month?: string; // 2026-10 (may be left out when entry_date is given)
   store_id: string | null;
   category: EntryCategory;
   description: string;
   vendor_id: string | null;
   amount: string;
+  // Only sent by the Inventory page; leaving them out keeps what's saved
+  entry_date?: string;
+  tank?: string;
+  gallons?: string;
+}
+
+// ---------- Inventory (owner / co-owner) ----------
+export type Grade = "Regular" | "Plus" | "Premium" | "Diesel" | "Other";
+export const GRADES: Grade[] = ["Regular", "Plus", "Premium", "Diesel", "Other"];
+export interface TankSpec {
+  name: string; grade: Grade; capacity: string | null;
+  aliases?: string[]; // older names (history is kept under them)
+  previous_name?: string; // sent when renaming, so the tank keeps its history
+}
+export interface TankStatus {
+  name: string; grade: Grade; capacity: string | null;
+  latest: string | null; latest_day: string | null; delivered_since_reading: string; on_hand: string | null; percent_full: string | null;
+  delivered: string; delivered_cost: string; used: string | null;
+  opening_day: string | null; closing_day: string | null; average_per_day: string | null; days_left: string | null;
+  order_soon: boolean;
+}
+export interface GradeTotal {
+  grade: Grade; tanks: number; capacity: string | null; on_hand: string | null; percent_full: string | null;
+  delivered: string; used: string | null; order_soon: boolean;
+}
+export interface FuelDelivery {
+  id: string; entry_date: string; tank: string; gallons: string; amount: string; description: string;
+  vendor_id: string | null; vendor_name: string | null;
+}
+export interface StoreInventory {
+  store_id: string; store_name: string;
+  fuel: {
+    tanks: TankStatus[];
+    grades: GradeTotal[];
+    pump_check: { first_day: string; last_day: string; pump_gallons: string; tank_gallons: string; difference: string; difference_percent: string | null } | null;
+    money: { sales: string; gallons_sold: string; price_per_gallon: string | null; delivered_cost: string; gallons_costed: string;
+             cost_per_gallon: string | null; margin_per_gallon: string | null };
+    deliveries: FuelDelivery[];
+  };
+  merchandise: {
+    sold: string; bought_typed: string; bought_paid_outs: string; bought: string; bought_percent_of_sales: string | null;
+    vendors: { vendor: string; amount: string; purchases: number; last_day: string | null; days_since: number | null }[];
+  };
+}
+export interface Inventory { month: string; label: string; reorder_percent: number; as_of: string; stores: StoreInventory[] }
+
+export interface VendorName { name: string; kind: VendorKind }
+export interface MiscPaidOut {
+  id: string; amount: string; kind: PaidOutKind; note: string | null; report_id: string; business_date: string;
+  status: Status; store_name: string; submitted_by_name: string | null;
 }
 
 export interface BookLine { label: string; amount: string; source: "typed" | "paid_outs" | "days" | "auto"; items: { what?: string; vendor?: string | null; amount: string }[] }

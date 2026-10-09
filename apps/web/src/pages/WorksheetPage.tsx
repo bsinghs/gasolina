@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import { hasOwnerAccess, type PaidOut, type Report } from "../api/types";
+import { hasOwnerAccess, type PaidOut, type Report, type VendorName } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
 import { PaidOutLines } from "../components/PaidOutLines";
@@ -64,11 +64,13 @@ export function WorksheetPage() {
   const [confirmOver, setConfirmOver] = useState(false);
   const saveTimer = useRef<number>();
   const [payees, setPayees] = useState<string[]>([]);
+  const [vendors, setVendors] = useState<VendorName[]>([]);
 
-  // Vendor names already used at this store, offered on the paid-out lines
+  // Paid-out vendors: the owner's list (searchable dropdown). Until there is one, names already used at this store.
   useEffect(() => {
     if (!storeId) return;
     let current = true;
+    api.vendors.names().then((v) => current && setVendors(v)).catch(() => current && setVendors([]));
     api.reports.payees(storeId).then((p) => current && setPayees(p)).catch(() => current && setPayees([]));
     return () => {
       current = false;
@@ -117,7 +119,7 @@ export function WorksheetPage() {
         employee_note: form.employee_note.trim() || null,
         paid_outs: form.paid_outs
           .filter((p) => p.payee.trim() || toCents(p.amount) > 0)
-          .map((p) => ({ ...p, payee: p.payee.trim(), amount: toApiAmount(p.amount), check_no: p.check_no?.trim() || null })),
+          .map((p) => ({ ...p, payee: p.payee.trim(), amount: toApiAmount(p.amount), check_no: p.check_no?.trim() || null, note: p.note?.trim() || null })),
         tank_inventory: Object.entries(form.tanks)
           .filter(([, g]) => g.trim() !== "" && !Number.isNaN(parseFloat(g.replace(/,/g, ""))))
           .map(([tank, g]) => ({ tank, gallons: Math.max(0, parseFloat(g.replace(/,/g, ""))).toFixed(1) })),
@@ -285,9 +287,9 @@ export function WorksheetPage() {
         <section className="section">
           <h2 className="section-title">Paid Outs</h2>
           <div className="grid-2">
-            <PaidOutLines kind="cash" lines={cashLines} disabled={!editable} suggestions={payees}
+            <PaidOutLines kind="cash" lines={cashLines} disabled={!editable} suggestions={payees} vendors={vendors}
               onChange={(lines) => change({ paid_outs: [...lines, ...checkLines] })} />
-            <PaidOutLines kind="check" lines={checkLines} disabled={!editable} suggestions={payees}
+            <PaidOutLines kind="check" lines={checkLines} disabled={!editable} suggestions={payees} vendors={vendors}
               onChange={(lines) => change({ paid_outs: [...cashLines, ...lines] })} />
           </div>
           <div className="calc-box">

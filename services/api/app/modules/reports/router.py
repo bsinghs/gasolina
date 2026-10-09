@@ -3,12 +3,14 @@
 from datetime import date
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.core import db
 from app.core.auth import CurrentUser, current_user, owner_only
+from app.core.dates import EARLIEST, business_today
+from app.core.errors import bad_request
 from app.modules.reports import service
-from app.modules.reports.schemas import ApproveIn, Report, ReportSummary, ReturnIn, WorksheetIn
+from app.modules.reports.schemas import ApproveIn, History, Report, ReportSummary, ReturnIn, WorksheetIn
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -35,6 +37,17 @@ def lookup(store_id: UUID, business_date: date, user: CurrentUser = Depends(curr
     with db.transaction() as conn:
         report_id = service.find_report_id(conn, store_id, business_date)
         return service.get_report(conn, user, report_id) if report_id else None
+
+
+@router.get("/history", response_model=History)
+def history(until: date | None = None, days: int = Query(default=30, ge=1, le=92), store_id: UUID | None = None,
+            user: CurrentUser = Depends(current_user)):
+    """My days, one page at a time (newest first) with whole-month totals. `until` defaults to today."""
+    until = until or business_today()
+    if until < EARLIEST:
+        raise bad_request("Pick a date from 2000 on")
+    with db.transaction() as conn:
+        return service.history(conn, user, until, days, store_id)
 
 
 @router.get("/payees", response_model=list[str])

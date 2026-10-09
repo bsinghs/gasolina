@@ -3,8 +3,11 @@
 import type {
   AppSettings, JournalLine, Me, Person, Report, ReportSummary, Store, WorksheetInput,
   Period, PeriodSummary, Vendor, VendorKind, LedgerEntry, EntryInput, ProfitAndLoss, PnlYear, BalanceSheet,
-  BalanceLineInput, VendorSpending,
+  BalanceLineInput, VendorSpending, History, Inventory, TankSpec, VendorName, MiscPaidOut,
 } from "./types";
+
+/** Tanks / tank_specs left out = keep the store's tanks as they are */
+type StoreInput = Pick<Store, "name" | "qb_location" | "active"> & { tanks?: string[]; tank_specs?: TankSpec[] };
 
 const BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "") + "/api";
 
@@ -89,8 +92,8 @@ export const api = {
   },
   stores: {
     list: () => request<Store[]>("/stores"),
-    create: (data: Omit<Store, "id" | "tanks"> & { tanks?: string[] }) => request<Store>("/stores", { method: "POST", body: data }),
-    update: (id: string, data: Omit<Store, "id">) => request<Store>(`/stores/${id}`, { method: "PATCH", body: data }),
+    create: (data: StoreInput) => request<Store>("/stores", { method: "POST", body: data }),
+    update: (id: string, data: StoreInput) => request<Store>(`/stores/${id}`, { method: "PATCH", body: data }),
     remove: (id: string) => request<{ ok: boolean }>(`/stores/${id}`, { method: "DELETE" }),
   },
 
@@ -108,6 +111,7 @@ export const api = {
     lookup: (store_id: string, business_date: string) =>
       request<Report | null>(`/reports/lookup${query({ store_id, business_date })}`),
     get: (id: string) => request<Report>(`/reports/${id}`),
+    history: (until: string, days = 30) => request<History>(`/reports/history${query({ until, days: String(days) })}`),
     payees: (store_id: string) => request<string[]>(`/reports/payees${query({ store_id })}`),
     save: (data: WorksheetInput) => request<Report>("/reports", { method: "PUT", body: data }),
     submit: (id: string) => request<Report>(`/reports/${id}/submit`, { method: "POST" }),
@@ -139,10 +143,14 @@ export const api = {
     update: (id: string, data: { name: string; kind: VendorKind; active: boolean }) =>
       request<Vendor>(`/vendors/${id}`, { method: "PATCH", body: data }),
     remove: (id: string) => request<{ ok: boolean }>(`/vendors/${id}`, { method: "DELETE" }),
+    names: () => request<VendorName[]>("/vendors/names"),
+    miscellaneous: (days = 90) => request<MiscPaidOut[]>(`/vendors/miscellaneous${query({ days: String(days) })}`),
     spending: (q: { period: "month" | "year"; value: string; store_id?: string; include: "approved" | "submitted" }) =>
       request<VendorSpending>(`/vendors/spending${query(q)}`),
   },
 
+  inventory: (q: { month: string; store_id?: string; include?: "approved" | "submitted" }) =>
+    request<Inventory>(`/inventory${query(q)}`),
   books: {
     entries: (month: string, store_id?: string) => request<LedgerEntry[]>(`/books/entries${query({ month, store_id })}`),
     addEntry: (data: EntryInput) => request<LedgerEntry>("/books/entries", { method: "POST", body: data }),

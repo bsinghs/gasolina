@@ -32,7 +32,8 @@ Every step is written to `audit_log` with who did it and when, and shows as Hist
 | --- | --- |
 | employee | Fill and submit worksheets for their assigned stores; edit while draft or sent back |
 | manager | Same as employee, for all their stores (room to grow into first-pass review) |
-| owner | Everything: review, approve, send back, reopen, export, people, stores, settings |
+| owner | Everything: review, approve, send back, reopen, export, people, stores, settings, books, inventory |
+| coowner | Same as owner, except only the owner (or app admin) adds, changes or removes owners and co-owners |
 
 ## Data model
 
@@ -50,6 +51,7 @@ services/api/app/
 │   ├── db.py          database connection + fetch_one / fetch_all / execute
 │   ├── auth.py        sign-in token -> CurrentUser (and the owner_only check)
 │   ├── errors.py      not_found(), forbidden(), ...
+│   ├── dates.py       business_today(): "today" in the stores' time zone (servers run in UTC)
 │   ├── audit.py       one history-log line for owner actions (books, vendors)
 │   └── json.py        exact(): money out as strings, never floats
 └── modules/
@@ -66,8 +68,10 @@ services/api/app/
     ├── settings/      QuickBooks account names, over/short alert, sales tax rate
     ├── summaries/     sales totals for a month / quarter / year (read-only)
     ├── vendors/       vendor list (cost of goods or expense) + spending by vendor
-    ├── books/         owner's typed purchases / expenses, Profit & Loss, Balance Sheet
+    ├── books/         owner's typed purchases / expenses (incl. fuel deliveries), Profit & Loss, Balance Sheet
     │   └── math.py            P&L and balance-sheet math (pure, tested)
+    ├── inventory/     fuel tanks + merchandise per store (read-only; owner home page)
+    │   └── math.py            on hand, % full, used, days left, pump check, bought vs sold (pure, tested)
     └── admin/         test-only reset; View-as lives in core/auth.py
 ```
 

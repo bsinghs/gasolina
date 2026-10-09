@@ -2,9 +2,9 @@
 // Paid outs on the daily sheets are matched to this list by name, which decides where they land in the P&L.
 
 import { Fragment, useCallback, useEffect, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
-import type { Vendor, VendorKind, VendorSpending } from "../api/types";
+import { MISCELLANEOUS, type MiscPaidOut, type Vendor, type VendorKind, type VendorSpending } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
 import { ReportTabs } from "../components/ReportTabs";
@@ -24,14 +24,16 @@ export function VendorsPage() {
 
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [spending, setSpending] = useState<VendorSpending | null>(null);
+  const [misc, setMisc] = useState<MiscPaidOut[]>([]);
   const [form, setForm] = useState<{ name: string; kind: VendorKind }>({ name: "", kind: "merchandise" });
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const load = useCallback(async () => {
-    const [v, s] = await Promise.all([api.vendors.list(), api.vendors.spending({ period, value, store_id: storeId || undefined, include: "approved" })]);
-    setVendors(v); setSpending(s);
+    const [v, s, m] = await Promise.all([api.vendors.list(), api.vendors.spending({ period, value, store_id: storeId || undefined, include: "approved" }),
+      api.vendors.miscellaneous(90)]);
+    setVendors(v); setSpending(s); setMisc(m);
   }, [period, value, storeId]);
   useEffect(() => { load().catch((e) => setMessage({ kind: "error", text: e.message })); }, [load]);
 
@@ -46,7 +48,7 @@ export function VendorsPage() {
   };
 
   const top = spending?.vendors[0];
-  const notOnList = spending?.vendors.filter((v) => !v.on_list) ?? [];
+  const notOnList = spending?.vendors.filter((v) => !v.on_list && v.vendor.toLowerCase() !== MISCELLANEOUS.toLowerCase()) ?? [];
 
   return (
     <main className="page stack">
@@ -100,6 +102,36 @@ export function VendorsPage() {
               </tbody>
             </table>
           </div>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">Miscellaneous paid outs to sort out (last 90 days)</div>
+        <div className="card-body stack" style={{ paddingTop: 12 }}>
+          <p className="muted" style={{ margin: 0 }}>
+            Employees pick a vendor from the list on each paid out. When it isn&apos;t there, they choose <strong>{MISCELLANEOUS}</strong> and write what it was.
+            Add the vendor here so they can pick it next time.
+          </p>
+          {misc.length === 0 ? <p className="muted" style={{ margin: 0 }}>Nothing to sort out.</p> : (
+            <div className="table-wrap">
+              <table style={{ minWidth: 560 }}>
+                <thead><tr><th className="left">Day</th><th className="left">Store</th><th>Amount</th><th className="left">Their note</th><th /></tr></thead>
+                <tbody>
+                  {misc.map((m) => (
+                    <tr key={m.id}>
+                      <td className="left"><Link to={`/days/${m.report_id}`}>{prettyDate(m.business_date)}</Link>
+                        {m.submitted_by_name && <div className="stamp">{m.submitted_by_name}</div>}</td>
+                      <td className="left">{m.store_name}</td>
+                      <td>{formatMoney(toCents(m.amount))}<div className="stamp">{m.kind}</div></td>
+                      <td className="left">{m.note ?? <span className="muted">no note</span>}</td>
+                      <td><button className="link-btn" onClick={() => { setForm({ ...form, name: (m.note ?? "").slice(0, 120) }); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                        Add as vendor…</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </section>
 

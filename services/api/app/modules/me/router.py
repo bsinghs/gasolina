@@ -61,7 +61,7 @@ def me(user: CurrentUser = Depends(current_user)):
             options = db.fetch_all(
                 conn,
                 """select id, name, role from people where active and role <> 'admin'
-                   order by case role when 'owner' then 0 when 'manager' then 1 else 2 end, name""",
+                   order by case role when 'owner' then 0 when 'coowner' then 1 when 'manager' then 2 else 3 end, name""",
             )
     return Me(id=user.id, email=user.email, name=user.name, role=user.role, stores=stores,
               over_short_alert=settings.over_short_alert, sales_tax_rate=settings.sales_tax_rate,

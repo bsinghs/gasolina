@@ -9,30 +9,37 @@ from psycopg.errors import UniqueViolation
 from app.core import db
 from app.core.auth import CurrentUser, current_user, owner_only
 from app.core.errors import conflict, not_found
-from app.modules.stores.schemas import DEFAULT_TANKS, Store, StoreIn
+from app.modules.stores.schemas import DEFAULT_TANKS, Store, StoreIn, specs_for
 
 router = APIRouter(prefix="/stores", tags=["stores"])
+
+
+def _out(row: dict | None) -> dict | None:
+    """A store as the API sends it: tank names in order, plus each tank's fuel type and capacity."""
+    if row is not None:
+        row["tank_specs"] = specs_for(row["tanks"], row.get("tank_specs"))
+    return row
 
 
 @router.get("", response_model=list[Store])
 def list_stores(user: CurrentUser = Depends(current_user)):
     with db.transaction() as conn:
         if user.is_owner:
-            return db.fetch_all(conn, "select * from stores order by name")
-        return db.fetch_all(
-            conn, "select * from stores where id = any(%s) and active order by name", [user.store_ids]
-        )
+            rows = db.fetch_all(conn, "select * from stores order by name")
+        else:
+            rows = db.fetch_all(conn, "select * from stores where id = any(%s) and active order by name", [user.store_ids])
+        return [_out(r) for r in rows]
 
 
 @router.post("", response_model=Store)
 def create_store(data: StoreIn, _: CurrentUser = Depends(owner_only)):
     try:
         with db.transaction() as conn:
-            return db.fetch_one(
+            return _out(db.fetch_one(
                 conn,
-                "insert into stores (name, qb_location, active, tanks) values (%s, %s, %s, %s) returning *",
-                [data.name, data.qb_location, data.active, json.dumps(data.tanks or DEFAULT_TANKS)],
-            )
+                "insert into stores (name, qb_location, active, tanks, tank_specs) values (%s, %s, %s, %s, %s) returning *",
+                [data.name, data.qb_location, data.active, json.dumps(data.tanks or DEFAULT_TANKS), json.dumps(data.specs_json() or {})],
+            ))
     except UniqueViolation:
         raise conflict("A store with that name already exists")
 
@@ -40,15 +47,20 @@ def create_store(data: StoreIn, _: CurrentUser = Depends(owner_only)):
 @router.patch("/{store_id}", response_model=Store)
 def update_store(store_id: UUID, data: StoreIn, _: CurrentUser = Depends(owner_only)):
     with db.transaction() as conn:
+        current = db.fetch_one(conn, "select tank_specs from stores where id = %s for update", [store_id])
+        if current is None:
+            raise not_found("Store not found")
         row = db.fetch_one(
             conn,
-            """update stores set name = %s, qb_location = %s, active = %s, tanks = coalesce(%s::jsonb, tanks)
+            """update stores set name = %s, qb_location = %s, active = %s, tanks = coalesce(%s::jsonb, tanks),
+                                 tank_specs = coalesce(%s::jsonb, tank_specs)
                where id = %s returning *""",
-            [data.name, data.qb_location, data.active, json.dumps(data.tanks) if data.tanks else None, store_id],
+            [data.name, data.qb_location, data.active, json.dumps(data.tanks) if data.tanks else None,
+             json.dumps(data.specs_json(current["tank_specs"])) if data.tank_specs is not None else None, store_id],
         )
     if row is None:
         raise not_found("Store not found")
-    return row
+    return _out(row)
 
 
 @router.delete("/{store_id}")

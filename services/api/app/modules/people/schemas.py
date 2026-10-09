@@ -3,8 +3,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-Role = Literal["employee", "manager", "owner"]  # what the owner can give someone
-ListedRole = Literal["employee", "manager", "owner", "admin"]  # admin comes from ADMIN_EMAILS only
+Role = Literal["employee", "manager", "owner", "coowner"]  # what the owner can give someone
+ListedRole = Literal["employee", "manager", "owner", "coowner", "admin"]  # admin comes from ADMIN_EMAILS only
+OWNER_LEVEL = ("owner", "coowner")  # see all stores; only the owner (or app admin) manages these
 
 
 class PersonIn(BaseModel):

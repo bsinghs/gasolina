@@ -28,6 +28,8 @@ class AppSettings(BaseModel):
     # Splits merchandise into taxable / non-taxable: taxable = sales tax / rate. PA = 6%
     # (Allegheny County 7%, Philadelphia 8%).
     sales_tax_rate: Decimal = Field(default=Decimal("0.06"), gt=0, le=Decimal("0.2"), decimal_places=4)
+    # Inventory: a fuel tank below this % full is flagged "Order soon"
+    reorder_percent: int = Field(default=25, ge=1, le=90)
     qb_accounts: QbAccounts = QbAccounts()
 
 

@@ -9,7 +9,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
 import { ReportTabs } from "../components/ReportTabs";
 import { Statement, type Row } from "../components/Statement";
-import { today } from "../lib/dates";
+import { today, prettyDate } from "../lib/dates";
 import { formatMoney, parseAmount, toCents } from "../lib/money";
 
 const CATEGORY: Record<EntryCategory, string> = {
@@ -171,7 +171,9 @@ export function ProfitLossPage() {
               <tbody>
                 {entries.map((e) => (
                   <tr key={e.id}>
-                    <td className="left">{CATEGORY[e.category]}</td><td className="left">{e.description}</td>
+                    <td className="left">{CATEGORY[e.category]}</td><td className="left">{e.description}
+                      {e.gallons && <div className="stamp">{Number(e.gallons).toLocaleString("en-US")} gal into {e.tank}{e.entry_date ? ` on ${prettyDate(e.entry_date)}` : ""} (Inventory)</div>}
+                      {!e.gallons && e.entry_date && <div className="stamp">{prettyDate(e.entry_date)}</div>}</td>
                     <td className="left">{e.vendor_name ?? "—"}</td><td className="left">{e.store_name ?? "All stores"}</td>
                     <td>{formatMoney(toCents(e.amount))}</td>
                     <td>

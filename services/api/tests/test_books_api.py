@@ -40,9 +40,6 @@ def world(client):
     b = client.post("/api/stores", json={"name": "Store B"}, headers=OWNER).json()
     client.post("/api/people", json={"email": "bookemp@example.com", "name": "Bea", "store_ids": [a["id"], b["id"]]}, headers=OWNER)
 
-    v = {name: client.post("/api/vendors", json={"name": name, "kind": kind}, headers=OWNER).json()
-         for name, kind in [("Sunoco Fuel", "fuel"), ("Pepsi", "merchandise"), ("Ice Co", "expense")]}
-
     def day(store, d, fuel, merch, tax, drop, paid_outs, approve=True):
         r = client.put("/api/reports", json={"store_id": store["id"], "business_date": d, "fuel_sale": fuel, "merch_sale": merch,
                                               "sales_tax": tax, "cash_drop": drop, "paid_outs": paid_outs}, headers=EMP)
@@ -58,6 +55,10 @@ def world(client):
         {"kind": "cash", "payee": "Bob's Repair", "amount": "10.00"}])
     day(a, "2026-10-02", "100.00", "0", "0", "100.00", [], approve=False)          # waiting for review
     day(b, "2026-10-01", "300.00", "100.00", "0", "400.00", [])                     # Store B
+
+    # Vendors added after those days were submitted (since Oct 9, submit needs listed names; old days keep theirs)
+    v = {name: client.post("/api/vendors", json={"name": name, "kind": kind}, headers=OWNER).json()
+         for name, kind in [("Sunoco Fuel", "fuel"), ("Pepsi", "merchandise"), ("Ice Co", "expense")]}
 
     def entry(store, month, category, description, amount, vendor=None):
         r = client.post("/api/books/entries", json={"month": month, "store_id": store and store["id"], "category": category,

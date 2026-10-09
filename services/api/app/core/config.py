@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # owner power, are listed separately on the People page, and the owner can't change them.
     admin_emails: str = ""
 
+    # The stores' time zone: decides what "today" is (servers run in UTC)
+    business_timezone: str = "America/New_York"
+
     # Comma-separated list of web app origins allowed to call the API
     cors_origins: str = "http://localhost:5173"
 

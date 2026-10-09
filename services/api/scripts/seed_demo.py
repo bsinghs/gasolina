@@ -1,4 +1,4 @@
-"""Add demo data: two stores, an owner, two employees.
+"""Add demo data: two stores, an owner, a co-owner, two employees.
 
     python -m scripts.seed_demo you@gmail.com
 """
@@ -25,6 +25,9 @@ def main(owner_email: str) -> None:
         conn.execute(
             "insert into people (email, name, role) values (%s, 'Owner', 'owner') on conflict (lower(email)) do nothing",
             [owner_email],
+        )
+        conn.execute(
+            "insert into people (email, name, role) values ('coowner@example.com', 'Co-owner', 'coowner') on conflict (lower(email)) do nothing"
         )
         for email, name, store_index in EMPLOYEES:
             person = conn.execute(

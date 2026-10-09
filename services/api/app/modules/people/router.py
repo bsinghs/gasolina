@@ -10,7 +10,7 @@ from psycopg.errors import UniqueViolation
 from app.core import db
 from app.core.auth import CurrentUser, owner_only
 from app.core.errors import bad_request, conflict, forbidden, not_found
-from app.modules.people.schemas import Person, PersonIn
+from app.modules.people.schemas import OWNER_LEVEL, Person, PersonIn
 
 router = APIRouter(prefix="/people", tags=["people"])
 
@@ -30,7 +30,8 @@ def list_people(user: CurrentUser = Depends(owner_only)):
 
 
 @router.post("", response_model=Person)
-def invite_person(data: PersonIn, _: CurrentUser = Depends(owner_only)):
+def invite_person(data: PersonIn, user: CurrentUser = Depends(owner_only)):
+    _check_may_manage(user, data.role)
     _check_stores(data)
     try:
         with db.transaction() as conn:
@@ -48,20 +49,25 @@ def invite_person(data: PersonIn, _: CurrentUser = Depends(owner_only)):
 
 @router.patch("/{person_id}", response_model=Person)
 def update_person(person_id: UUID, data: PersonIn, user: CurrentUser = Depends(owner_only)):
-    if person_id == user.id and (data.role != "owner" or not data.active):
-        raise bad_request("You can't remove your own owner access")
+    if person_id == user.id:
+        if data.role != user.role or not data.active:
+            raise bad_request("You can't remove your own owner access")
+    else:
+        _check_may_manage(user, data.role)
     _check_stores(data)
     try:
-        return _update_person(person_id, data)
+        return _update_person(person_id, data, user)
     except UniqueViolation:
         raise conflict("Someone with that email is already on the list")
 
 
-def _update_person(person_id: UUID, data: PersonIn) -> dict:
+def _update_person(person_id: UUID, data: PersonIn, user: CurrentUser) -> dict:
     with db.transaction() as conn:
         target = db.fetch_one(conn, "select role from people where id = %s", [person_id])
         if target and target["role"] == "admin":
             raise forbidden("The app admin can't be changed here")
+        if target and person_id != user.id:
+            _check_may_manage(user, target["role"])
         current = db.fetch_all(conn, "select store_id from store_members where person_id = %s", [person_id])
         _check_active_stores(conn, data.store_ids, already=[r["store_id"] for r in current])
         row = db.fetch_one(
@@ -88,9 +94,16 @@ def _check_active_stores(conn: Connection, store_ids: list[UUID], already: list[
         raise bad_request(f"{', '.join(inactive)} is deactivated. Reactivate it in Settings first")
 
 
+def _check_may_manage(user: CurrentUser, role: str) -> None:
+    """Owners and co-owners are added, changed and removed only by the owner (or the app admin),
+    so a co-owner can never lock the owner out."""
+    if role in OWNER_LEVEL and not user.is_full_owner:
+        raise forbidden("Only the owner can add or change owners and co-owners")
+
+
 def _check_stores(data: PersonIn) -> None:
     """Employees and managers only see their stores, so they need at least one."""
-    if data.role != "owner" and data.active and not data.store_ids:
+    if data.role not in OWNER_LEVEL and data.active and not data.store_ids:
         raise bad_request("Pick at least one store for this person (owners see all stores)")
 
 
@@ -120,6 +133,7 @@ def delete_person(person_id: UUID, user: CurrentUser = Depends(owner_only)):
             raise not_found("Person not found")
         if target["role"] == "admin":
             raise forbidden("The app admin can't be changed here")
+        _check_may_manage(user, target["role"])
         used = db.fetch_one(
             conn,
             """select 1 where exists (select 1 from daily_reports

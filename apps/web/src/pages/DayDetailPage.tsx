@@ -110,8 +110,8 @@ export function DayDetailPage() {
             {(report.tank_inventory ?? []).map((t) => line(`↳ Ending: ${t.tank}`, `${t.gallons} gal`))}
             {line("Credit / debit", `${formatMoney(toCents(report.credit))} / ${formatMoney(toCents(report.debit))}`)}
             {line("EBT", formatMoney(toCents(report.ebt)))}
-            {cashLines.map((p) => line(`Cash paid out: ${p.payee}`, formatMoney(toCents(p.amount))))}
-            {checkLines.map((p) => line(`Check ${p.check_no ? "#" + p.check_no : ""}: ${p.payee}`, formatMoney(toCents(p.amount))))}
+            {cashLines.map((p) => line(`Cash paid out: ${p.payee}${p.note ? ` (${p.note})` : ""}`, formatMoney(toCents(p.amount))))}
+            {checkLines.map((p) => line(`Check ${p.check_no ? "#" + p.check_no : ""}: ${p.payee}${p.note ? ` (${p.note})` : ""}`, formatMoney(toCents(p.amount))))}
             {line("Expected cash", formatMoney(toCents(report.expected_cash)))}
             {line("Cash drop", formatMoney(toCents(report.cash_drop)))}
           </div>

@@ -10,9 +10,10 @@ from psycopg import Connection
 
 from app.core import audit, db
 from app.core.auth import CurrentUser
+from app.core.dates import business_today
 from app.core.errors import bad_request, conflict, not_found
 from app.modules.books import math
-from app.modules.books.schemas import BalanceIn, EntryIn
+from app.modules.books.schemas import BalanceIn, EntryIn, check_delivery
 from app.modules.summaries.service import STATUSES, period_range
 
 
@@ -152,30 +153,66 @@ def _check_vendor(conn: Connection, vendor_id: UUID | None, keeps: UUID | None =
         raise bad_request(f"{v['name']} is deactivated. Reactivate it on the Vendors tab first.")
 
 
+DELIVERY_FIELDS = ("entry_date", "tank", "gallons")
+
+
+def _check_tank(conn: Connection, store_id: UUID | None, tank: str | None, keeps: str | None = None) -> None:
+    """A delivery goes into one of the store's tanks (an edited entry may keep a tank since renamed)."""
+    if tank is None or tank == keeps:
+        return
+    row = db.fetch_one(conn, "select tanks from stores where id = %s", [store_id])
+    if row is None or tank not in row["tanks"]:
+        raise bad_request(f"{tank} isn't one of this store's tanks (Settings)")
+
+
+def _check_delivery(category, store_id, entry_date, tank, gallons) -> None:
+    try:
+        check_delivery(category, store_id, entry_date, tank, gallons)
+    except ValueError as exc:
+        raise bad_request(str(exc)) from None
+    if entry_date is not None and entry_date > business_today() + timedelta(days=1):
+        raise bad_request("The date can't be in the future")
+
+
 def add_entry(conn: Connection, user: CurrentUser, data: EntryIn) -> dict:
+    _check_delivery(data.category, data.store_id, data.entry_date, data.tank, data.gallons)
     _check_store(conn, data.store_id)
     _check_vendor(conn, data.vendor_id)
+    _check_tank(conn, data.store_id, data.tank)
     row = db.fetch_one(
         conn,
-        """insert into ledger_entries (month, store_id, category, description, vendor_id, amount, created_by)
-           values (%s, %s, %s, %s, %s, %s, %s) returning id""",
-        [f"{data.month}-01", data.store_id, data.category, data.description, data.vendor_id, data.amount, user.id],
+        """insert into ledger_entries (month, store_id, category, description, vendor_id, amount, created_by,
+                                       entry_date, tank, gallons)
+           values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s) returning id""",
+        [f"{data.month}-01", data.store_id, data.category, data.description, data.vendor_id, data.amount, user.id,
+         data.entry_date, data.tank, data.gallons],
     )
     audit.log(conn, user, "ledger.added", {"id": row["id"], **data.model_dump()})
     return _entry(conn, row["id"])
 
 
 def update_entry(conn: Connection, user: CurrentUser, entry_id: UUID, data: EntryIn) -> dict:
+    """Change an entry. Date, tank and gallons are kept as they are when the request doesn't send them
+    (the P&L screen doesn't know about deliveries), so editing there never loses them."""
     _check_store(conn, data.store_id)
     before = _entry(conn, entry_id)
     _check_vendor(conn, data.vendor_id, keeps=before["vendor_id"])
+    kept = {f: (getattr(data, f) if f in data.model_fields_set else before[f]) for f in DELIVERY_FIELDS}
+    if kept["entry_date"] is not None and kept["entry_date"].strftime("%Y-%m") != data.month:
+        raise bad_request("The entry's date is in another month. Change the date too.")
+    _check_delivery(data.category, data.store_id, kept["entry_date"], kept["tank"], kept["gallons"])
+    _check_tank(conn, data.store_id, kept["tank"], keeps=before["tank"] if data.store_id == before["store_id"] else None)
     db.execute(
         conn,
         """update ledger_entries set month = %s, store_id = %s, category = %s, description = %s, vendor_id = %s,
-           amount = %s, updated_at = now() where id = %s""",
-        [f"{data.month}-01", data.store_id, data.category, data.description, data.vendor_id, data.amount, entry_id],
+           amount = %s, entry_date = %s, tank = %s, gallons = %s, updated_at = now() where id = %s""",
+        [f"{data.month}-01", data.store_id, data.category, data.description, data.vendor_id, data.amount,
+         kept["entry_date"], kept["tank"], kept["gallons"], entry_id],
     )
-    audit.log(conn, user, "ledger.changed", {"id": entry_id, "before": {k: before[k] for k in ("description", "amount", "category")}, "after": data.model_dump()})
+    audit.log(conn, user, "ledger.changed", {
+        "id": entry_id,
+        "before": {k: before[k] for k in ("description", "amount", "category", *DELIVERY_FIELDS)},
+        "after": data.model_dump() | kept})
     return _entry(conn, entry_id)
 
 
@@ -183,7 +220,7 @@ def delete_entry(conn: Connection, user: CurrentUser, entry_id: UUID) -> None:
     before = _entry(conn, entry_id)
     db.execute(conn, "delete from ledger_entries where id = %s", [entry_id])
     # the history log keeps what was removed, so it can be typed back if deleted by mistake
-    audit.log(conn, user, "ledger.deleted", {k: before[k] for k in ("id", "month", "store_id", "category", "description", "vendor_name", "amount")})
+    audit.log(conn, user, "ledger.deleted", {k: before[k] for k in ("id", "month", "store_id", "category", "description", "vendor_name", "amount", *DELIVERY_FIELDS)})
 
 
 def _entry(conn: Connection, entry_id: UUID) -> dict:
