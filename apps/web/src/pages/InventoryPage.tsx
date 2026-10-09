@@ -244,7 +244,9 @@ function StoreCard({ s, reorder, asOf, readOnly, onDelivery, onPurchase, onRemov
           <Notice kind={checkPct > 1 && !check.days_missing ? "warn" : "info"}>
             {prettyDate(check.first_day)} – {prettyDate(check.last_day)}: pumps sold <strong>{gal(check.pump_gallons)} gal</strong>, tanks went down{" "}
             <strong>{gal(check.tank_gallons)} gal</strong>.{" "}
-            {check.days_missing > 0 ? null : Number(check.difference) === 0 ? "They match." : Number(check.difference) > 0
+            {check.days_missing > 0 ? null : Number(check.difference) === 0 ? "They match."
+              : Math.abs(checkPct) <= 1 ? <>A {gal(String(Math.abs(Number(check.difference))))} gal ({Math.abs(checkPct).toFixed(1)}%) difference: within 1%, normal for meter and temperature differences.</>
+              : Number(check.difference) > 0
               ? <>Tanks lost <strong>{gal(check.difference)} gal ({check.difference_percent}%)</strong> more than was sold. Check readings, deliveries, or for a leak.</>
               : <>Tanks went down {gal(String(-Number(check.difference)))} gal ({Math.abs(checkPct).toFixed(1)}%) less than was sold. Check the readings.</>}
             {check.days_missing > 0 && <><strong>Can&apos;t compare yet:</strong> {check.days_missing} day{check.days_missing === 1 ? " has" : "s have"} no
