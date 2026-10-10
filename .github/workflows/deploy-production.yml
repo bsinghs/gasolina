@@ -1,0 +1,57 @@
+# The "Deploy production" button: GitHub → Actions → Deploy production → Run workflow (branch: main).
+# Runs the tests again, then puts the API from main on the PRODUCTION copy. The screens publish from main by themselves.
+name: Deploy production
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run this from the main branch (it was ${{ github.ref_name }})."
+          exit 1
+      - run: echo "Deploying ${{ github.sha }} from main"
+
+  api-tests:
+    needs: check
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shiftclose_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/api/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - env:
+          TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/shiftclose_test
+        run: python -m pytest -q
+
+  deploy:
+    needs: api-tests
+    uses: ./.github/workflows/deploy-api.yml
+    with:
+      target: production
+    permissions:
+      contents: read
+      id-token: write

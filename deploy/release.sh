@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Release what's on `test` to production screens: checks, merge into main, tag v<VERSION>, push.
-# Then run deploy/cloudrun/deploy.sh production in Cloud Shell for the API.   Usage: make release
+# Release what's on `test`: checks, then move it to main and push. GitHub Actions then runs the tests and
+# tags v<VERSION>; the screens publish from main. Then press "Deploy production" (GitHub → Actions) for the API.
+# Usage: make release
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 VERSION=$(cat VERSION)
@@ -19,8 +20,8 @@ make test
 git checkout -q main
 git pull -q --ff-only origin main
 git merge --ff-only -q test || { git checkout -q test; fail "main has commits that test doesn't. Merge main into test first."; }
-git tag -a "v$VERSION" -m "Release $VERSION"
-git push -q origin main "v$VERSION"
+git push -q origin main
 git checkout -q test
-printf '\n\033[1;32mReleased v%s: the screens are publishing now.\033[0m\n' "$VERSION"
-echo "Next, in Cloud Shell:  cd ~/gasolina && git checkout main && git pull && bash deploy/cloudrun/deploy.sh production"
+printf '\n\033[1;32mReleased %s to main: the screens are publishing; GitHub Actions tests it and tags v%s.\033[0m\n' "$VERSION" "$VERSION"
+echo "Next: GitHub → Actions → Deploy production → Run workflow (branch main) to put the API live."
+echo "(Backup: Cloud Shell  cd ~/gasolina && git checkout main && git pull && bash deploy/cloudrun/deploy.sh production)"

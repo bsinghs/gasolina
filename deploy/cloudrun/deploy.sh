@@ -46,13 +46,19 @@ printf '\nDeploying version \033[1m%s\033[0m (commit %s, branch %s)\n' "$VERSION
 if [[ "$TARGET" == "production" ]] && ! git tag --points-at HEAD | grep -qx "v${VERSION}"; then
   printf '\033[1;33mNote: this commit has no release tag v%s yet (made by "make release"). Did you pull main?\033[0m\n' "$VERSION"
 fi
-if [[ "$TARGET" == "production" ]]; then
+# CI=true (GitHub Actions): no questions (the "Deploy production" button is the confirmation) and only the
+# build + start steps; the one-time setup steps (1-4, 7-8) are done by running this script by hand once.
+QUICK="${CI:-}"
+if [[ "$TARGET" == "production" && -z "$QUICK" ]]; then
   printf '\n\033[1;31mYou are deploying the REAL app (production). Did you try this on test first?\033[0m\n'
   read -rp "Type 'production' to continue: " CONFIRM
   [[ "$CONFIRM" == "production" ]] || { echo "Stopped."; exit 1; }
 fi
 gcloud config set project "$PROJECT" >/dev/null
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
+if [[ -z "$QUICK" ]]; then
 if [[ "$(gcloud billing projects describe "$PROJECT" --format='value(billingEnabled)' 2>/dev/null)" != "True" ]]; then
   echo "Billing isn't linked to project $PROJECT yet. Your billing accounts:"
   gcloud billing accounts list
@@ -64,9 +70,6 @@ fi
 step "1/8 Turning on the Google services we use (first time ~1 minute)"
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
   secretmanager.googleapis.com cloudscheduler.googleapis.com billingbudgets.googleapis.com cloudbilling.googleapis.com
-
-PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
-RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
 step "2/8 Database address (stored in Secret Manager as $DB_SECRET, never in code)"
 if gcloud secrets describe "$DB_SECRET" >/dev/null 2>&1; then
@@ -96,6 +99,8 @@ gcloud artifacts repositories set-cleanup-policies "$REPO" --location="$REGION" 
   --policy=deploy/cloudrun/cleanup-policy.json --no-dry-run --quiet >/dev/null
 echo "Done."
 
+fi  # end of one-time setup steps
+
 step "5/8 Building the API (~2-3 minutes)"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/api:${VERSION}-${COMMIT}"
 gcloud builds submit --config=deploy/cloudrun/cloudbuild.yaml --substitutions=_IMAGE="$IMAGE" \
@@ -111,7 +116,7 @@ SUPABASE_URL: "${SUPABASE_URL}"
 ADMIN_EMAILS: "${ADMIN_EMAILS}"
 CORS_ORIGINS: "${CORS_ORIGINS}"
 GIT_COMMIT: "${COMMIT}"
-DEPLOYED_BY: "$(gcloud config get-value account 2>/dev/null)"
+DEPLOYED_BY: "${DEPLOYED_BY:-$(gcloud config get-value account 2>/dev/null)}"
 ENVEOF
 gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" \
   --allow-unauthenticated \
@@ -121,6 +126,7 @@ gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" \
 rm -f "$ENV_FILE"
 URL=$(gcloud run services describe "$SERVICE" --region="$REGION" --format='value(status.url)')
 
+if [[ -z "$QUICK" ]]; then
 step "7/8 Keep-warm check every 5 minutes (so nobody waits)"
 if gcloud scheduler jobs describe "$KEEP_WARM_JOB" --location="$REGION" >/dev/null 2>&1; then
   gcloud scheduler jobs update http "$KEEP_WARM_JOB" --location="$REGION" --schedule="*/5 * * * *" \
@@ -142,8 +148,10 @@ else
     || echo "Couldn't create the budget automatically. Create it in Billing → Budgets & alerts (amount: \$1)."
 fi
 
+fi  # end of one-time setup steps
+
 step "Checking it works"
 sleep 3
 curl -fsS "${URL}/api/health" && echo
 printf '\n\033[1;32m[%s] API version %s (%s) is live at: %s\033[0m\n' "$TARGET" "$VERSION" "$COMMIT" "$URL"
-echo "Copy that address back to Claude."
+[[ -n "$QUICK" ]] || echo "Copy that address back to Claude."

@@ -12,7 +12,8 @@ services/api/          Python 3.12 FastAPI. All business rules, auth checks, dat
   scripts/             migrate.py (applies database/migrations), seed_demo.py
   tests/               pytest
 database/migrations/   numbered plain SQL (001_, 002_ ...). Applied in order on every API start
-deploy/cloudrun/       Google Cloud Run deploy (run deploy.sh in Cloud Shell)
+deploy/cloudrun/       Google Cloud Run deploy (deploy.sh; CI mode used by GitHub Actions)
+.github/workflows/     CI: tests + web build on every push, test API deploy, release tags, "Deploy production" button
 docs/                  STATUS.md (done/next), ARCHITECTURE.md, DEPLOY.md, features/ (one spec per feature)
 VERSION, CHANGELOG.md  release version (year.month.n) and plain-language release notes
 render.yaml            old Render host (being retired)
@@ -27,8 +28,8 @@ Makefile               make demo · make live · make test · make stop · make 
 | Screens locally against the real online API | `make live` |
 | API tests | `make test` (needs Python 3.10+). Workflow tests also need `TEST_DATABASE_URL` |
 | Type-check + build the web app | `cd apps/web && npm run build` |
-| Deploy the API | Cloud Shell: `cd ~/gasolina && git pull && bash deploy/cloudrun/deploy.sh test` (then `production`) |
-| Release to production | Bump `VERSION` + add a `CHANGELOG.md` entry on `test`, then `make release` (tests, merge to main, tag `v<version>`), then `deploy.sh production`. See docs/DEPLOY.md "Releasing" |
+| Deploy the API | **Automatic** to test on every push to `test` (GitHub Actions). Production: GitHub → Actions → **Deploy production** → Run workflow. Backup: Cloud Shell `bash deploy/cloudrun/deploy.sh test` / `production` |
+| Release to production | Bump `VERSION` + add a `CHANGELOG.md` entry on `test`, then `make release` (merge to main; GitHub tests it and tags `v<version>`), then the **Deploy production** button. See docs/DEPLOY.md "Releasing", docs/features/ci-cd.md |
 
 ## Two copies of the app: test first, then production
 
@@ -40,7 +41,7 @@ Makefile               make demo · make live · make test · make stop · make 
 | Look | Orange TEST banner, `[TEST]` tab title | Normal |
 | Extras | Admin **Reset test data** (Settings) | None: real data can't be wiped from the app |
 
-Flow: commit to `test` → push → try it on the test site (and `deploy.sh test` if the API changed) → bump `VERSION` + `CHANGELOG.md` → `make release` (merges into `main`, tags) → `deploy.sh production`. Versions show at the bottom of every page; Settings → Versions & releases has the release log.
+Flow: commit to `test` → push (GitHub Actions: tests, then deploys the test API) → try it on the test site → bump `VERSION` + `CHANGELOG.md` → `make release` (merges into `main`; Actions tests + tags) → **Deploy production** button. Versions show at the bottom of every page; Settings → Versions & releases has the release log.
 `APP_ENV` (API) and `VITE_APP_ENV` (web) say which copy is running; web settings per copy are in `apps/web/.env.production`, `.env.test`, `.env.demo`.
 
 ## Rules (don't break these)
