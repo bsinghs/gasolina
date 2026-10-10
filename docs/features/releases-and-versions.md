@@ -29,7 +29,7 @@ Migration 009 (add-only): `releases (id, env, version, git_commit, deployed_by, 
 | Method | Path | Who | Returns |
 | --- | --- | --- | --- |
 | GET | `/api/health` | anyone | `{ok, env, version, commit}` |
-| GET | `/api/releases` | owner, co-owner, admin | last 50 rows of this copy's release log, newest first |
+| GET | `/api/releases` | owner, co-owner, admin | last 50 rows of this copy's release log, newest first (when, copy, version, commit; who deployed stays in the database only) |
 
 Version and commit come from the `VERSION` file (copied into the API image) and `GIT_COMMIT` / `DEPLOYED_BY` (set by `deploy.sh`). Locally: `dev` / your git commit if set.
 

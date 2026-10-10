@@ -4,6 +4,9 @@ What changed in each production release, in plain words. Newest first.
 Version = year.month.release-in-month (`VERSION` file). Each release has a git tag `v<version>`.
 How to release: [docs/DEPLOY.md](docs/DEPLOY.md#releasing).
 
+## 2026.10.4 (Oct 9, 2026)
+- Settings → Versions & releases no longer shows who deployed (kept in the database only).
+
 ## 2026.10.3 (Oct 9, 2026)
 - **Inventory** is the owner's new home page: gallons on hand and % full per tank, deliveries, gallons used, days left, an "Order soon" flag, pumps vs tanks check, sell price vs cost per gallon. Merchandise bought vs sold. Fuel deliveries typed here also count as fuel purchases on the P&L.
 - **Co-owner** role: sees every page the owner sees, changes nothing (no change buttons).

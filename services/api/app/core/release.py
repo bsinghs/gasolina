@@ -43,6 +43,7 @@ def release_log(limit: int = 50) -> list[dict]:
     with db.transaction() as conn:
         return db.fetch_all(
             conn,
-            "select env, version, git_commit, deployed_by, started_at from releases order by started_at desc, id desc limit %s",
+            # who deployed stays in the database for the record, but isn't shown in the app
+            "select env, version, git_commit, started_at from releases order by started_at desc, id desc limit %s",
             [limit],
         )

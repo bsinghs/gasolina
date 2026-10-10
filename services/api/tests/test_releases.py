@@ -51,7 +51,8 @@ def test_release_log_one_row_per_new_version_or_commit(app_env):
             pass
     with start(app_env) as c:
         log = c.get("/api/releases", headers=OWNER).json()
-    assert [(r["env"], r["git_commit"], r["deployed_by"]) for r in log] == [("test", "abc1234", "bhajan@example.com")]
+    assert [(r["env"], r["git_commit"]) for r in log] == [("test", "abc1234")]
+    assert "deployed_by" not in log[0]                                         # kept in the database, not shown
 
     os.environ["GIT_COMMIT"] = "def5678"; get_settings.cache_clear()
     with start(app_env) as c:

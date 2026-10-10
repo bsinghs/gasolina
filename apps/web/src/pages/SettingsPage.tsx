@@ -195,13 +195,13 @@ export function SettingsPage() {
           </p>
           <div className="table-wrap">
             <table>
-              <thead><tr><th className="left">When</th><th className="left">Copy</th><th className="left">Version</th><th className="left">Commit</th><th className="left">By</th></tr></thead>
+              <thead><tr><th className="left">When</th><th className="left">Copy</th><th className="left">Version</th><th className="left">Commit</th></tr></thead>
               <tbody>
                 {releases.map((r, i) => (
                   <tr key={i}><td className="left">{prettyTime(r.started_at)}</td><td className="left">{r.env}</td><td className="left">{r.version}</td>
-                    <td className="left">{r.git_commit}</td><td className="left">{r.deployed_by ?? "–"}</td></tr>
+                    <td className="left">{r.git_commit}</td></tr>
                 ))}
-                {releases.length === 0 && <tr><td colSpan={5} className="left muted">No releases recorded yet.</td></tr>}
+                {releases.length === 0 && <tr><td colSpan={4} className="left muted">No releases recorded yet.</td></tr>}
               </tbody>
             </table>
           </div>
