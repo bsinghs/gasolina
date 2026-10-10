@@ -14,9 +14,7 @@ from fastapi import Depends, Header, HTTPException, Request
 
 from app.core import db
 from app.core.config import get_settings
-
-
-OWNER_ROLES = ("owner", "coowner", "admin")  # see all stores, review, books. Co-owners are view-only (current_user)
+from app.core.permissions import can
 
 
 @dataclass
@@ -36,13 +34,18 @@ class CurrentUser:
 
     @property
     def is_owner(self) -> bool:
-        """Sees what the owner sees: the business owner, a co-owner (view only), or an app admin."""
-        return self.role in OWNER_ROLES
+        """Sees what the owner sees (all stores, owner screens): owner, co-owner (view only), app admin."""
+        return can(self.role, "see_all_stores")
+
+    @property
+    def can_change(self) -> bool:
+        """May save anything. Not a co-owner (view only), and never while being viewed as (View as)."""
+        return can(self.role, "make_changes") and self.viewed_by is None
 
     @property
     def is_full_owner(self) -> bool:
         """May manage owners and co-owners: the owner or the app admin (not a co-owner)."""
-        return self.role in ("owner", "admin")
+        return can(self.role, "manage_owners")
 
     def can_access_store(self, store_id: UUID) -> bool:
         return self.is_owner or store_id in self.store_ids
@@ -154,8 +157,9 @@ def current_user(
     user = _signed_in_user(authorization, x_dev_email)
     if x_view_as:
         return _view_as(user, x_view_as, request.method)
-    if user.role == "coowner" and request.method.upper() not in READ_ONLY_METHODS:
-        # Co-owners see everything the owner sees, but can't change anything (owner's rule, Oct 9)
+    # The one gate for "view only": a role without make_changes can read but never save (see permissions.py).
+    # The screens don't show change buttons to these people; this is the safety net behind them.
+    if not user.can_change and request.method.upper() not in READ_ONLY_METHODS:
         raise HTTPException(status_code=403, detail="Co-owners can view everything but can't make changes. Ask the owner.")
     return user
 

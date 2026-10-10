@@ -33,7 +33,9 @@ Every step is written to `audit_log` with who did it and when, and shows as Hist
 | employee | Fill and submit worksheets for their assigned stores; edit while draft or sent back |
 | manager | Same as employee, for all their stores (room to grow into first-pass review) |
 | owner | Everything: review, approve, send back, reopen, export, people, stores, settings, books, inventory |
-| coowner | Sees everything the owner sees, changes nothing (view only, enforced by the API) |
+| coowner | Sees every owner page, changes nothing: no change buttons on the screens, and the API refuses changes |
+
+Permissions are one table (`app/core/permissions.py`, mirrored in `apps/web/src/lib/access.ts`): owner/admin have `see_all_stores`, `make_changes`, `manage_owners`; coowner only `see_all_stores`; manager/employee `make_changes` on their own stores. The API's `current_user` gate refuses any non-read request without `make_changes`; screens use `useViewOnly()` to hide change buttons.
 
 ## Data model
 
@@ -49,7 +51,8 @@ services/api/app/
 ├── core/              shared plumbing used by every module
 │   ├── config.py      settings from environment variables
 │   ├── db.py          database connection + fetch_one / fetch_all / execute
-│   ├── auth.py        sign-in token -> CurrentUser (and the owner_only check)
+│   ├── auth.py        sign-in token -> CurrentUser; the one gate (view-only roles can't save); owner_only
+│   ├── permissions.py who may do what: one table per role (same table in web lib/access.ts)
 │   ├── errors.py      not_found(), forbidden(), ...
 │   ├── dates.py       business_today(): "today" in the stores' time zone (servers run in UTC)
 │   ├── audit.py       one history-log line for owner actions (books, vendors)

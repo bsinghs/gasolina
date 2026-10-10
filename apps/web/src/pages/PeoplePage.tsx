@@ -5,15 +5,17 @@ import { api } from "../api/client";
 import { isOwnerLevel, ROLE_NAMES, type Person, type Role, type Store } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
+import { useViewOnly } from "../lib/access";
 
 type Draft = Omit<Person, "id" | "has_signed_in">;
 const BLANK: Draft = { email: "", name: "", role: "employee", active: true, store_ids: [] };
 
 export function PeoplePage() {
   const { me } = useAuth();
+  const viewOnly = useViewOnly(); // co-owner: sees everyone, changes nothing
   // Owners and co-owners are managed only by the owner (or app admin), so a co-owner can't lock the owner out
   const managesOwners = me?.role === "owner" || me?.role === "admin";
-  const canEdit = (p: Person) => p.role !== "admin" && (managesOwners || !isOwnerLevel(p.role) || p.id === me?.id);
+  const canEdit = (p: Person) => !viewOnly && p.role !== "admin" && (managesOwners || !isOwnerLevel(p.role) || p.id === me?.id);
   const [people, setPeople] = useState<Person[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [editing, setEditing] = useState<string | "new" | null>(null);
@@ -75,7 +77,7 @@ export function PeoplePage() {
     <main className="page stack">
       <div className="page-head">
         <div><h1>People</h1><div className="muted">Only people on this list can sign in. Add their Gmail; their name fills in from Google when they first sign in.</div></div>
-        <button className="btn btn-primary" onClick={() => startEdit(null)}>+ Add person</button>
+        {!viewOnly && <button className="btn btn-primary" onClick={() => startEdit(null)}>+ Add person</button>}
       </div>
       {error && <Notice kind="error">{error}</Notice>}
 
@@ -142,6 +144,7 @@ export function PeoplePage() {
                 <td>{p.role === "admin"
                   ? <span className="muted" title="Runs the app and helps with support. Set up by the app, not on this page.">Managed by app</span>
                   : canEdit(p) ? <button className="link-btn" onClick={() => startEdit(p)}>Edit</button>
+                  : viewOnly ? null
                   : <span className="muted" title="Only the owner can change owners and co-owners">Owner only</span>}</td>
               </tr>
             ))}

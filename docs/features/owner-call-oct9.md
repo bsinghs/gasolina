@@ -7,7 +7,7 @@ Four changes, built one at a time in this order, plus a **Future** section for t
 | # | Change | Who sees it |
 | --- | --- | --- |
 | 1 | **My days** shows fuel and merchandise sales per day, month totals, "show older days", and the time each day was submitted | Employees, managers (submit time also on the owner's Review list) |
-| 2 | **Co-owner** role: sees everything the owner sees, **changes nothing** | Owner gives it on People |
+| 2 | **Co-owner** role: sees every owner page, **changes nothing** (no change buttons) | Owner gives it on People |
 | 3 | **Inventory** page (fuel tanks + merchandise): bought vs sold, % full, when to order. Home page for owner and co-owner | Owner, co-owner |
 | 4 | **Vendor dropdown** on paid outs: searchable list the owner keeps, or **Miscellaneous** with a note | Everyone filling a worksheet; owner sorts out the notes |
 
@@ -40,22 +40,43 @@ Principles (as always): add-only database changes, math in pure functions with u
 
 ## 2. Co-owner (view only)
 
-**Problem.** The owner has a partner who should be able to see everything the owner sees.
+**Problem.** The owner has a partner who should know as much as possible about the business, without needing to change anything (that stays with the owner).
 
-**Rule (owner, Oct 9): co-owners can look but never change anything.** New role **`coowner`** ("Co-owner"):
-- Sees every owner screen with information: Inventory (home), Review and each day, Reports (Sales, P&L, Balance Sheet, Vendors), all stores.
-- **Can't change anything**: no approving or sending back, no worksheets, deliveries, purchases, expenses, balances, vendors, people, stores, settings or exports. The API refuses every change from a co-owner (any request that isn't a read), the same way the admin's View as works. The screens hide those buttons and show a "View only" bar; Worksheet, Export, People and Settings aren't in a co-owner's menu.
-- Only the owner (or the app admin) adds, changes or removes owners and co-owners.
+**Rule (owner + Bhajan, Oct 9): a co-owner sees every page the owner sees and changes nothing. There are no change options on their screens** (so they never hit a "refused" message). The API also blocks changes from a co-owner, as a silent safety net behind the screens.
 
-_First built Oct 9 with full owner powers; changed the same day to view only after Bhajan confirmed the owner's intent._
+| Page | Co-owner sees | Not shown to a co-owner |
+| --- | --- | --- |
+| Inventory (home) | All stores, tanks, deliveries, merchandise | + Fuel delivery, + Merchandise purchase, Remove |
+| Review + each day | Every worksheet, totals, history, journal entry | Approve, Send back, Reopen, Edit, expense-account boxes |
+| Worksheet | Any store, any day, fields locked | Typing, Submit, paid-out editing |
+| Reports: Sales, P&L, Balance Sheet, Vendors | All numbers, statements, vendor list, Miscellaneous notes; Download for Excel | Add / Edit / Remove entries, balance lines, vendors |
+| Export | Days ready for QuickBooks; **Check paid-outs** and **All worksheet data** downloads (read-only files) | **QuickBooks download** (it marks days as exported, so it is a change; only the owner does it) |
+| People | Everyone: names, emails, roles, stores, status | + Add person, Edit, Delete |
+| Settings | Stores and tanks (type, size), QuickBooks account names, tax rate, Order soon %, over/short alert (all fields locked) | Add store, Change tanks, Deactivate, Delete, Save settings |
+
+A blue **"View only"** bar is shown at the top for co-owners. Only the owner (or the app admin) adds, changes or removes owners and co-owners.
+
+### How it's built: one permissions table
+Each role has a set of permissions, written once for the API (`services/api/app/core/permissions.py`) and once for the screens (`apps/web/src/lib/access.ts`, same table):
+
+| Role | see_all_stores | make_changes | manage_owners |
+| --- | --- | --- | --- |
+| owner, admin | ✓ | ✓ | ✓ |
+| coowner | ✓ | | |
+| manager, employee | (own stores) | ✓ (worksheets) | |
+
+- **API:** `current_user` (the one gate every request passes) refuses any non-read request from someone without `make_changes`. Route guards (`owner_only`, store checks) narrow it further. `CurrentUser.is_owner` = see_all_stores, `.can_change`, `.is_full_owner` = manage_owners.
+- **Screens:** `useViewOnly()` (no `make_changes`, or the admin's View as) hides change buttons and locks fields. Screens only hide; the API decides.
+
+_History: first built Oct 9 with full owner powers, then (same day) view only with some pages hidden, then this: every page visible, view only._
 
 **Data.** Migration 008 widens the role check to include `coowner` (add-only: no row changes).
-**Code.** `current_user` (API) refuses non-GET requests from a co-owner; `CurrentUser.is_owner` / `hasOwnerAccess()` include `coowner` for reading; `useViewOnly()` (web) hides buttons; `CurrentUser.is_full_owner` (owner or admin) guards managing owners.
 
 **Acceptance.**
-- [x] Co-owner can open every owner information screen (tested: reports, review, books, balance, settings read, people read, vendors, inventory, history).
-- [x] Every change is refused with a clear message (tested on 14 kinds of change, nothing saved).
-- [x] Co-owner shows as "Co-owner" on People and in the admin's View as list; screens show "View only" and no edit buttons.
+- [x] Co-owner opens every owner page (Inventory, Review, days, Worksheet, Reports ×4, Export, People, Settings) with no change buttons; fields locked; nothing sent to the API but reads (browser check).
+- [x] Read-only downloads work for a co-owner; QuickBooks export is not offered.
+- [x] API refuses 14 kinds of change from a co-owner and nothing is saved; permissions table unit-tested.
+- [x] Owner's screens unchanged (browser check).
 
 ## 3. Inventory (fuel + merchandise), the owner's home page
 

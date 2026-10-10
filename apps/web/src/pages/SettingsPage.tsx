@@ -6,6 +6,7 @@ import { GRADES, type AppSettings, type Grade, type QbAccounts, type Store, type
 import { useAuth } from "../auth/AuthProvider";
 import { IS_TEST } from "../lib/env";
 import { Notice } from "../components/Notice";
+import { useViewOnly } from "../lib/access";
 
 const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
   cash: "Cash drop goes to",
@@ -20,6 +21,7 @@ const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
 
 export function SettingsPage() {
   const { refresh, me } = useAuth();
+  const viewOnly = useViewOnly(); // co-owner: sees stores, tanks and settings; no change buttons
   const [confirmReset, setConfirmReset] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -87,11 +89,11 @@ export function SettingsPage() {
                 ) : (
                   <span className="muted" style={{ display: "block", fontSize: 12 }}>
                     Tanks: {(s.tank_specs ?? []).map((t) => `${t.name} (${t.grade}${t.capacity ? `, ${Number(t.capacity).toLocaleString("en-US")} gal` : ""})`).join(" · ") || "–"}{" "}
-                    <button className="link-btn" style={{ padding: 0, minHeight: 0, fontSize: 12 }} onClick={() => setEditTanks({ id: s.id, tanks: s.tank_specs.map((t) => ({ ...t, previous_name: t.name })) })}>Change</button>
+                    {!viewOnly && <button className="link-btn" style={{ padding: 0, minHeight: 0, fontSize: 12 }} onClick={() => setEditTanks({ id: s.id, tanks: s.tank_specs.map((t) => ({ ...t, previous_name: t.name })) })}>Change</button>}
                   </span>
                 )}
               </span>
-              {confirmDelete === s.id ? (
+              {viewOnly ? null : confirmDelete === s.id ? (
                 <span className="row-wrap" style={{ gap: 8, alignItems: "center" }}>
                   <span className="muted">Delete permanently?</span>
                   <button className="btn btn-danger btn-sm" onClick={() => { setConfirmDelete(null); guard(() => api.stores.remove(s.id), "Store deleted."); }}>Yes, delete</button>
@@ -109,13 +111,13 @@ export function SettingsPage() {
               )}
             </div>
           ))}
-          <form onSubmit={addStore} className="row-wrap" style={{ paddingTop: 12 }}>
+          {!viewOnly && <form onSubmit={addStore} className="row-wrap" style={{ paddingTop: 12 }}>
             <label className="label-stack" style={{ flex: 2, minWidth: 180 }}>New store name
               <input className="text" required value={newStore.name} onChange={(e) => setNewStore({ ...newStore, name: e.target.value })} /></label>
             <label className="label-stack" style={{ flex: 1, minWidth: 140 }}>QuickBooks location (optional)
               <input className="text" value={newStore.qb_location} onChange={(e) => setNewStore({ ...newStore, qb_location: e.target.value })} /></label>
             <button className="btn btn-dark" type="submit">Add store</button>
-          </form>
+          </form>}
         </div>
       </section>
 
@@ -146,7 +148,7 @@ export function SettingsPage() {
       {settings && (
         <form className="card" onSubmit={saveSettings}>
           <div className="card-head">QuickBooks accounts &amp; alerts</div>
-          <div className="card-body">
+          <fieldset disabled={viewOnly} className="card-body" style={{ border: "none", margin: 0, minWidth: 0 }}>
             <p className="muted">Use the exact account names from your QuickBooks chart of accounts (sub-accounts as Parent:Sub).</p>
             {(Object.keys(ACCOUNT_LABELS) as (keyof QbAccounts)[]).map((key) => (
               <div key={key} className="field-row">
@@ -170,8 +172,8 @@ export function SettingsPage() {
               <input id="threshold" className="num" inputMode="decimal" value={settings.over_short_alert}
                 onChange={(e) => setSettings({ ...settings, over_short_alert: e.target.value })} />
             </div>
-          </div>
-          <div className="card-pad"><button className="btn btn-primary" type="submit">Save settings</button></div>
+          </fieldset>
+          {!viewOnly && <div className="card-pad"><button className="btn btn-primary" type="submit">Save settings</button></div>}
         </form>
       )}
     </main>

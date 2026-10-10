@@ -5,11 +5,13 @@ import { api } from "../api/client";
 import type { ReportSummary } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { Notice } from "../components/Notice";
+import { useViewOnly } from "../lib/access";
 import { daysAgo, prettyDate, today } from "../lib/dates";
 import { formatMoney, toCents } from "../lib/money";
 
 export function ExportPage() {
   const { me } = useAuth();
+  const viewOnly = useViewOnly(); // co-owner: sees the days and the read-only downloads, can't mark days exported
   const [dateFrom, setDateFrom] = useState(daysAgo(7));
   const [dateTo, setDateTo] = useState(today());
   const [storeId, setStoreId] = useState("");
@@ -69,12 +71,14 @@ export function ExportPage() {
           {ready.length === 0 && <p className="muted">No approved days in this range.</p>}
         </div>
         <div className="card-pad stack" style={{ gap: 8 }}>
+          {viewOnly ? <span className="muted">View only: the owner downloads the QuickBooks file (it marks these days as exported).</span> : <>
           <button className="btn btn-primary btn-block" disabled={ready.length === 0}
             onClick={() => run(() => api.exports.quickbooks({ date_from: dateFrom, date_to: dateTo, store_id: storeId || undefined, include_already_exported: includeExported }),
               "Downloaded. Those days are now marked Exported. In QuickBooks: Settings ⚙ → Import data → Journal entries.")}>
             Download QuickBooks CSV
           </button>
           <span className="muted">Turn off account numbers in QuickBooks before importing, and make sure the account names in Settings match your chart of accounts.</span>
+          </>}
         </div>
       </section>
 

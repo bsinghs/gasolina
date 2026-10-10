@@ -114,7 +114,10 @@ def test_coowner_sees_everything_the_owner_sees(client, world):
     assert me["role"] == "coowner" and len(me["stores"]) == 2
     for path in ["/api/reports?status=submitted", "/api/summaries?period=month&value=2026-08", "/api/books/pnl?month=2026-08",
                  "/api/books/balance?month=2026-08", "/api/settings", "/api/people", "/api/vendors", "/api/inventory?month=2026-08",
-                 "/api/vendors/miscellaneous", "/api/reports/history?until=2026-08-31"]:
+                 "/api/vendors/miscellaneous", "/api/reports/history?until=2026-08-31", "/api/stores",
+                 "/api/exports/check-paid-outs.csv?date_from=2026-08-01&date_to=2026-08-31",
+                 "/api/exports/raw.csv?date_from=2026-08-01&date_to=2026-08-31",
+                 f"/api/reports/lookup?store_id={world['b']['id']}&business_date=2026-08-30"]:
         assert client.get(path, headers=CO).status_code == 200, path
     people = {p["email"]: p for p in ok(client.get("/api/people", headers=CO))}
     assert people["co@example.com"]["role"] == "coowner" and "admin@example.com" not in people

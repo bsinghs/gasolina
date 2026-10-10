@@ -2,7 +2,7 @@
 
 export type Role = "employee" | "manager" | "owner" | "coowner" | "admin";
 
-/** Owner powers: the business owner, a co-owner, or the app admin (support). */
+/** Sees the owner's screens and every store: owner, co-owner (view only), app admin. Same as can(role, "see_all_stores") */
 export const hasOwnerAccess = (role: Role | string | undefined) => role === "owner" || role === "coowner" || role === "admin";
 /** Sees all stores (no store list needed): owner and co-owner */
 export const isOwnerLevel = (role: Role | string | undefined) => role === "owner" || role === "coowner";
