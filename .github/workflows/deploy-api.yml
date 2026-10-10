@@ -29,4 +29,7 @@ jobs:
         env:
           CI: "true"
           DEPLOYED_BY: github-actions (${{ github.actor }})
-        run: bash deploy/cloudrun/deploy.sh ${{ inputs.target }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+        run: |
+          export PROJECT_NUMBER="$(echo "$WIF_PROVIDER" | cut -d/ -f2)"   # projects/<number>/locations/...
+          bash deploy/cloudrun/deploy.sh ${{ inputs.target }}

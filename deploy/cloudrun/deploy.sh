@@ -8,6 +8,8 @@
 #
 # Safe to re-run: each step skips what already exists.
 set -euo pipefail
+# On GitHub, show the failing line as an error note on the run (readable without opening the log)
+[[ -n "${GITHUB_ACTIONS:-}" ]] && trap 'echo "::error title=deploy.sh failed::line $LINENO: $BASH_COMMAND"' ERR
 
 TARGET="${1:-}"
 PROJECT="${PROJECT:-gasolina-510519}"
@@ -55,7 +57,8 @@ if [[ "$TARGET" == "production" && -z "$QUICK" ]]; then
   [[ "$CONFIRM" == "production" ]] || { echo "Stopped."; exit 1; }
 fi
 gcloud config set project "$PROJECT" >/dev/null
-PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+# GitHub passes PROJECT_NUMBER (its deploy account isn't allowed to read project details)
+PROJECT_NUMBER="${PROJECT_NUMBER:-$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')}"
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
 if [[ -z "$QUICK" ]]; then
