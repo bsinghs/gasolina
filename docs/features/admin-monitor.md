@@ -51,7 +51,8 @@ $0: one small row per request in the existing Supabase database (≈ a few MB pe
 - [x] History shows all kinds incl. people, stores, settings changes, with filters and paging.
 - [x] Rows older than 90 days removed on start.
 - [x] Tests (`tests/test_monitor.py`, 12), `npm run build`, click-through locally as employee (phone), co-owner, owner, admin (desktop + phone); docs (STATUS, ARCHITECTURE, CHANGELOG 2026.10.5).
-- [ ] On the test site after the automatic deploy; then production (Deploy production button).
+- [x] On the test site after the automatic deploy (Oct 10): page loads, request rows written, history newest first.
+- [ ] Production (Deploy production button).
 
 ## Stories
 1. Request log + ping + retention (API, migration 010).
