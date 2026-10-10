@@ -44,9 +44,21 @@ gcloud iam workload-identity-pools providers describe "$PROVIDER" --location=glo
 echo "Done."
 
 say "4/4 Let that repository act as the deploy account"
-gcloud iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIdentityUser --quiet \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${REPO}" >/dev/null
-echo "Done."
+# A just-created account can take a minute to be visible to IAM ("PERMISSION_DENIED ... or it may not exist"): retry.
+MEMBER="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${REPO}"
+for attempt in 1 2 3 4 5 6 7 8; do
+  if gcloud iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIdentityUser --quiet \
+       --member="$MEMBER" >/dev/null 2>&1; then
+    echo "Done."; break
+  fi
+  if [[ $attempt == 8 ]]; then
+    echo "Still refused after ~2 minutes. Showing the error:"
+    gcloud iam service-accounts add-iam-policy-binding "$SA" --role=roles/iam.workloadIdentityUser --quiet --member="$MEMBER"
+    exit 1
+  fi
+  echo "The new account isn't visible yet (normal for a minute). Trying again in 15 seconds… ($attempt/8)"
+  sleep 15
+done
 
 PROVIDER_NAME="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL}/providers/${PROVIDER}"
 printf '\n\033[1;32mAll set.\033[0m Now in GitHub: %s → Settings → Secrets and variables → Actions → Variables tab → New repository variable:\n\n' "https://github.com/${REPO}"
