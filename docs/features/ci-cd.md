@@ -39,4 +39,5 @@ One-time setup (Bhajan, Cloud Shell, ~5 minutes): `bash deploy/cloudrun/setup-gi
 - [x] Workflows: tests + web build on every push; tag on main; test deploy on test; production deploy button (YAML checked).
 - [x] `deploy.sh` CI mode; setup script for keyless sign-in; `make release` no longer tags by hand.
 - [x] First green runs on GitHub (Oct 9: CI on `test` and `main`); `main` run tagged `v2026.10.4` by itself.
-- [ ] Setup script run + variables set (Bhajan); first automatic test deploy; first production deploy by button.
+- [x] Setup script run + repository variables set (Bhajan, Oct 9).
+- [ ] First automatic test deploy; first production deploy by button.
