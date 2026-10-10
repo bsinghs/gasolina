@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from psycopg.errors import UniqueViolation
 
-from app.core import db
+from app.core import audit, db
 from app.core.auth import CurrentUser, current_user, owner_only
 from app.core.errors import conflict, not_found
 from app.modules.stores.schemas import DEFAULT_TANKS, Store, StoreIn, specs_for
@@ -31,23 +31,31 @@ def list_stores(user: CurrentUser = Depends(current_user)):
         return [_out(r) for r in rows]
 
 
+def _summary(row: dict) -> dict:
+    """What the history log keeps about a store."""
+    return {"id": row["id"], "name": row["name"], "qb_location": row["qb_location"], "active": row["active"],
+            "tanks": row["tanks"], "tank_specs": row["tank_specs"]}
+
+
 @router.post("", response_model=Store)
-def create_store(data: StoreIn, _: CurrentUser = Depends(owner_only)):
+def create_store(data: StoreIn, user: CurrentUser = Depends(owner_only)):
     try:
         with db.transaction() as conn:
-            return _out(db.fetch_one(
+            row = db.fetch_one(
                 conn,
                 "insert into stores (name, qb_location, active, tanks, tank_specs) values (%s, %s, %s, %s, %s) returning *",
                 [data.name, data.qb_location, data.active, json.dumps(data.tanks or DEFAULT_TANKS), json.dumps(data.specs_json() or {})],
-            ))
+            )
+            audit.log(conn, user, "store.added", _summary(row))
+            return _out(row)
     except UniqueViolation:
         raise conflict("A store with that name already exists")
 
 
 @router.patch("/{store_id}", response_model=Store)
-def update_store(store_id: UUID, data: StoreIn, _: CurrentUser = Depends(owner_only)):
+def update_store(store_id: UUID, data: StoreIn, user: CurrentUser = Depends(owner_only)):
     with db.transaction() as conn:
-        current = db.fetch_one(conn, "select tank_specs from stores where id = %s for update", [store_id])
+        current = db.fetch_one(conn, "select * from stores where id = %s for update", [store_id])
         if current is None:
             raise not_found("Store not found")
         row = db.fetch_one(
@@ -58,16 +66,19 @@ def update_store(store_id: UUID, data: StoreIn, _: CurrentUser = Depends(owner_o
             [data.name, data.qb_location, data.active, json.dumps(data.tanks) if data.tanks else None,
              json.dumps(data.specs_json(current["tank_specs"])) if data.tank_specs is not None else None, store_id],
         )
+        if row is not None:
+            audit.log(conn, user, "store.changed", {"before": _summary(current), "after": _summary(row)})
     if row is None:
         raise not_found("Store not found")
     return _out(row)
 
 
 @router.delete("/{store_id}")
-def delete_store(store_id: UUID, _: CurrentUser = Depends(owner_only)):
+def delete_store(store_id: UUID, user: CurrentUser = Depends(owner_only)):
     """Only for stores added by mistake. A store with worksheets must be deactivated instead."""
     with db.transaction() as conn:
-        if db.fetch_one(conn, "select 1 from stores where id = %s", [store_id]) is None:
+        store = db.fetch_one(conn, "select * from stores where id = %s", [store_id])
+        if store is None:
             raise not_found("Store not found")
         if db.fetch_one(conn, "select 1 from daily_reports where store_id = %s limit 1", [store_id]):
             raise conflict("This store has worksheets. Deactivate it instead so the records stay.")
@@ -86,4 +97,5 @@ def delete_store(store_id: UUID, _: CurrentUser = Depends(owner_only)):
             names = ", ".join(r["name"] for r in stranded)
             raise conflict(f"{names} only work(s) at this store. Give them another store (or remove them) first.")
         db.execute(conn, "delete from stores where id = %s", [store_id])  # store_members cascade
+        audit.log(conn, user, "store.removed", _summary(store))
     return {"ok": True}

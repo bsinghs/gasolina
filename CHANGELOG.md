@@ -4,6 +4,11 @@ What changed in each production release, in plain words. Newest first.
 Version = year.month.release-in-month (`VERSION` file). Each release has a git tag `v<version>`.
 How to release: [docs/DEPLOY.md](docs/DEPLOY.md#releasing).
 
+## 2026.10.5 (Oct 10, 2026)
+- **Monitor** (app admin only): who's online right now and on which screen, traffic per minute, usage since the last release (visits, active minutes, errors, slow requests), and the full history of what people did.
+- History now also records changes to people, stores and settings.
+- Sign-in page says that use of the app is recorded.
+
 ## 2026.10.4 (Oct 9, 2026)
 - Settings → Versions & releases no longer shows who deployed (kept in the database only).
 

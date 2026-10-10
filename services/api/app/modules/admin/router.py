@@ -5,7 +5,7 @@ On production these endpoints answer 404, so real data can never be wiped from t
 
 from fastapi import APIRouter, Depends
 
-from app.core import db
+from app.core import audit, db
 from app.core.auth import CurrentUser, current_user
 from app.core.config import get_settings
 from app.core.errors import forbidden, not_found
@@ -37,4 +37,5 @@ def reset_test_data(user: CurrentUser = Depends(current_user)):
     with db.transaction() as conn:
         for name, sql in RESET_STEPS:
             removed[name] = conn.execute(sql).rowcount
+        audit.log(conn, user, "test_data.reset", {"removed": removed})
     return {"ok": True, "removed": removed}

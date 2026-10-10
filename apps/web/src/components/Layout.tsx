@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { api } from "../api/client";
 import { hasOwnerAccess, ROLE_NAMES, type Role } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { VersionFooter } from "./VersionFooter";
@@ -13,6 +15,8 @@ export function Layout() {
   const link = ({ isActive }: { isActive: boolean }) => (isActive ? "active" : "");
   const options = me?.view_as_options ?? null; // only the app admin gets these
   const viewing = Boolean(me?.viewed_by_name);
+  const isAdmin = me?.role === "admin" && !viewing;
+  usePresencePing();
 
   const switchTo = async (personId: string) => {
     await viewAs(personId || null);
@@ -45,6 +49,7 @@ export function Layout() {
           {isOwner && <NavLink to="/export" className={link}>Export</NavLink>}
           {isOwner && <NavLink to="/people" className={link}>People</NavLink>}
           {isOwner && <NavLink to="/settings" className={link}>Settings</NavLink>}
+          {isAdmin && <NavLink to="/monitor" className={link}>Monitor</NavLink>}
         </nav>
         <div className="who">
           {options ? (
@@ -69,4 +74,16 @@ export function Layout() {
       <VersionFooter />
     </>
   );
+}
+
+/** While the app is open and on screen, tell the API once a minute that this person is here
+ * (the admin Monitor's "Online now"). Paused while the tab is hidden. */
+function usePresencePing() {
+  useEffect(() => {
+    const beat = () => { if (document.visibilityState === "visible") api.ping().catch(() => undefined); };
+    beat();
+    const timer = window.setInterval(beat, 60_000);
+    document.addEventListener("visibilitychange", beat);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", beat); };
+  }, []);
 }

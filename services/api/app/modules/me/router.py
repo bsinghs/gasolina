@@ -42,6 +42,12 @@ class Me(BaseModel):
     viewed_by_name: str | None = None
 
 
+@router.get("/ping")
+def ping(_: CurrentUser = Depends(current_user)):
+    """Called once a minute while the app is open, so the admin's Monitor shows who is online."""
+    return {"ok": True}
+
+
 @router.get("", response_model=Me)
 def me(user: CurrentUser = Depends(current_user)):
     with db.transaction() as conn:

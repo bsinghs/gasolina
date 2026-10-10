@@ -1,6 +1,6 @@
 # Status and next steps
 
-_Last updated: Oct 9, 2026_
+_Last updated: Oct 10, 2026_
 
 ## Done
 
@@ -48,6 +48,9 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 
 Long-term direction: [ROADMAP.md](ROADMAP.md): replace QuickBooks (~$30/month per store) step by step, with the accountant's OK.
 
+## Latest (Oct 10): admin Monitor (2026.10.5)
+App admin only: **Monitor** page with who's online now (incl. screen and phone/computer), requests per minute for the last hour, usage since the last release / today / 7 / 30 days (visits, active minutes, screens, errors, slowest requests) and the full history of what people did, now including people, store and settings changes. One request-log row per API request (migration 010, kept 90 days; no ids, values or IP). Spec: [features/admin-monitor.md](features/admin-monitor.md). 106 API tests.
+
 ## After the demo (in order)
 
 1. **Shift-report photo upload** on the worksheet (tables already exist)
@@ -60,7 +63,7 @@ Long-term direction: [ROADMAP.md](ROADMAP.md): replace QuickBooks (~$30/month pe
 
 1. ~~Automatic checks on every push~~: done Oct 9 (GitHub Actions: tests + web build, test API auto-deploy, release tags, Deploy production button). Spec: [features/ci-cd.md](features/ci-cd.md). Live: keyless sign-in set up, first automatic test deploy and first production deploy by button (2026.10.4, Oct 9)
 2. **Click tests with Playwright**: employee submits on a phone, owner sends back, fix, approve, export. Runs on every push. $0
-3. **Error alerts** (e.g. Sentry free plan): email when the app errors on someone's phone. $0 tier
+3. **Error alerts** (e.g. Sentry free plan): email when the app errors on someone's phone. $0 tier. Partly covered Oct 10: server errors and refused requests now show on the admin **Monitor** (no email yet)
 4. ~~Test copy of the app~~: done Oct 5 (finish setup steps above)
 5. **Training from the same Playwright scripts**: 60-second phone video + one-page picture guide for employees; owner walkthrough. Re-run to refresh when screens change
 6. Builder + independent reviewer for each new feature (start with taxable / non-taxable)

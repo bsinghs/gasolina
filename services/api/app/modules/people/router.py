@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from psycopg import Connection
 from psycopg.errors import UniqueViolation
 
-from app.core import db
+from app.core import audit, db
 from app.core.auth import CurrentUser, owner_only
 from app.core.errors import bad_request, conflict, forbidden, not_found
 from app.modules.people.schemas import OWNER_LEVEL, Person, PersonIn
@@ -42,7 +42,9 @@ def invite_person(data: PersonIn, user: CurrentUser = Depends(owner_only)):
                 [data.email, _name_or_placeholder(data), data.role, data.active],
             )
             _set_stores(conn, row["id"], data.store_ids)
-            return _get(conn, row["id"])
+            person = _get(conn, row["id"])
+            audit.log(conn, user, "person.invited", _summary(conn, person))
+            return person
     except UniqueViolation:
         raise conflict("Someone with that email is already on the list")
 
@@ -66,6 +68,7 @@ def _update_person(person_id: UUID, data: PersonIn, user: CurrentUser) -> dict:
         target = db.fetch_one(conn, "select role from people where id = %s", [person_id])
         if target and target["role"] == "admin":
             raise forbidden("The app admin can't be changed here")
+        before = _get(conn, person_id) if target else None
         if target and person_id != user.id:
             _check_may_manage(user, target["role"])
         current = db.fetch_all(conn, "select store_id from store_members where person_id = %s", [person_id])
@@ -78,7 +81,9 @@ def _update_person(person_id: UUID, data: PersonIn, user: CurrentUser) -> dict:
         if row is None:
             raise not_found("Person not found")
         _set_stores(conn, person_id, data.store_ids)
-        return _get(conn, person_id)
+        after = _get(conn, person_id)
+        audit.log(conn, user, "person.changed", {"before": _summary(conn, before), "after": _summary(conn, after)})
+        return after
 
 
 def _check_active_stores(conn: Connection, store_ids: list[UUID], already: list[UUID]) -> None:
@@ -118,6 +123,15 @@ def _set_stores(conn: Connection, person_id: UUID, store_ids: list[UUID]) -> Non
         db.execute(conn, "insert into store_members (person_id, store_id) values (%s, %s)", [person_id, store_id])
 
 
+def _summary(conn: Connection, person: dict | None) -> dict | None:
+    """What the history log keeps about a person: enough to read "who was changed, and how"."""
+    if person is None:
+        return None
+    stores = db.fetch_all(conn, "select name from stores where id = any(%s) order by name", [list(person["store_ids"])])
+    return {"id": person["id"], "name": person["name"], "email": person["email"], "role": person["role"],
+            "active": person["active"], "stores": [r["name"] for r in stores]}
+
+
 def _get(conn: Connection, person_id: UUID) -> dict:
     return db.fetch_one(conn, PERSON_SELECT + " where p.id = %s group by p.id", [person_id])
 
@@ -128,7 +142,7 @@ def delete_person(person_id: UUID, user: CurrentUser = Depends(owner_only)):
     if person_id == user.id:
         raise bad_request("You can't delete yourself")
     with db.transaction() as conn:
-        target = db.fetch_one(conn, "select role from people where id = %s", [person_id])
+        target = db.fetch_one(conn, "select role, name, email from people where id = %s", [person_id])
         if target is None:
             raise not_found("Person not found")
         if target["role"] == "admin":
@@ -145,4 +159,5 @@ def delete_person(person_id: UUID, user: CurrentUser = Depends(owner_only)):
         if used:
             raise conflict("This person has worksheets or history. Deactivate them instead so the records stay.")
         db.execute(conn, "delete from people where id = %s", [person_id])  # store_members cascade
+        audit.log(conn, user, "person.removed", {"id": person_id, "name": target["name"], "email": target["email"], "role": target["role"]})
     return {"ok": True}

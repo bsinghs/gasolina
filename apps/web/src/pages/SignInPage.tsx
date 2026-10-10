@@ -62,7 +62,7 @@ export function SignInPage() {
             ))}
           </div>
         )}
-        <p style={{ fontSize: 12, color: "#9fb2b7", textAlign: "center" }}>Only people your manager has added can sign in.</p>
+        <p style={{ fontSize: 12, color: "#9fb2b7", textAlign: "center" }}>Only people your manager has added can sign in. Use of this app is recorded (who, when, which screen) to keep it working.</p>
       </div>
     </main>
   );

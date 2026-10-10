@@ -9,6 +9,7 @@ import { Notice } from "./components/Notice";
 import { DayDetailPage } from "./pages/DayDetailPage";
 import { ExportPage } from "./pages/ExportPage";
 import { InventoryPage } from "./pages/InventoryPage";
+import { MonitorPage } from "./pages/MonitorPage";
 import { MyDaysPage } from "./pages/MyDaysPage";
 import { PeoplePage } from "./pages/PeoplePage";
 import { BalanceSheetPage } from "./pages/BalanceSheetPage";
@@ -23,6 +24,12 @@ import { WorksheetPage } from "./pages/WorksheetPage";
 function OwnerOnly({ children }: { children: ReactNode }) {
   const { me } = useAuth();
   return hasOwnerAccess(me?.role) ? <>{children}</> : <Navigate to="/worksheet" replace />;
+}
+
+/** The app admin themself (not while using View as) */
+function AdminOnly({ children }: { children: ReactNode }) {
+  const { me } = useAuth();
+  return me?.role === "admin" && !me.viewed_by_name ? <>{children}</> : <Navigate to="/" replace />;
 }
 
 export function App() {
@@ -50,6 +57,7 @@ export function App() {
         <Route path="/export" element={<OwnerOnly><ExportPage /></OwnerOnly>} />
         <Route path="/people" element={<OwnerOnly><PeoplePage /></OwnerOnly>} />
         <Route path="/settings" element={<OwnerOnly><SettingsPage /></OwnerOnly>} />
+        <Route path="/monitor" element={<AdminOnly><MonitorPage /></AdminOnly>} />
         <Route path="*" element={<Navigate to={home} replace />} />
       </Route>
     </Routes>

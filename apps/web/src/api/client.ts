@@ -4,6 +4,7 @@ import type {
   AppSettings, JournalLine, Me, Person, Report, ReportSummary, Store, WorksheetInput,
   Period, PeriodSummary, Vendor, VendorKind, LedgerEntry, EntryInput, ProfitAndLoss, PnlYear, BalanceSheet,
   BalanceLineInput, VendorSpending, History, Inventory, TankSpec, Health, Release, VendorName, MiscPaidOut,
+  MonitorLive, MonitorUsage, MonitorHistory, MonitorPeriod, HistoryKind,
 } from "./types";
 
 /** Tanks / tank_specs left out = keep the store's tanks as they are */
@@ -34,7 +35,8 @@ async function send(path: string, options: { method?: string; body?: unknown }):
     try {
       return await fetch(BASE + path, {
         method,
-        headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
+        // X-Page: which screen asked (for the admin Monitor; ids are stripped by the API)
+        headers: { "Content-Type": "application/json", "X-Page": window.location.pathname, ...(await getAuthHeaders()) },
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
       });
     } catch (err) {
@@ -88,6 +90,16 @@ export const api = {
   me: () => request<Me>("/me"),
   health: () => request<Health>("/health"),
   releases: () => request<Release[]>("/releases"),
+  /** Once a minute while the app is open: shows the person as online on the admin Monitor */
+  ping: () => request<{ ok: boolean }>("/me/ping"),
+
+  monitor: {
+    live: (includeMe: boolean) => request<MonitorLive>(`/monitor/live${query({ include_me: includeMe })}`),
+    usage: (period: MonitorPeriod, includeMe: boolean) =>
+      request<MonitorUsage>(`/monitor/usage${query({ period, include_me: includeMe })}`),
+    history: (q: { person_id?: string; kind?: HistoryKind; before?: number }) =>
+      request<MonitorHistory>(`/monitor/history${query({ ...q, before: q.before ? String(q.before) : undefined })}`),
+  },
 
   admin: {
     resetTestData: () => request<{ ok: boolean; removed: Record<string, number> }>("/admin/reset-test-data", { method: "POST" }),

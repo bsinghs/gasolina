@@ -6,7 +6,7 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from app.core import db
+from app.core import audit, db
 from app.core.auth import CurrentUser, owner_only
 
 router = APIRouter(prefix="/settings", tags=["settings"])
@@ -45,8 +45,13 @@ def get_settings(_: CurrentUser = Depends(owner_only)):
 
 
 @router.put("", response_model=AppSettings)
-def save_settings(data: AppSettings, _: CurrentUser = Depends(owner_only)):
+def save_settings(data: AppSettings, user: CurrentUser = Depends(owner_only)):
     with db.transaction() as conn:
+        before = load_settings(conn).model_dump(mode="json")
+        after = data.model_dump(mode="json")
+        changed = {k: {"before": before.get(k), "after": v} for k, v in after.items() if before.get(k) != v}
+        if changed:
+            audit.log(conn, user, "settings.saved", {"changed": changed})
         for key, value in data.model_dump(mode="json").items():
             db.execute(
                 conn,

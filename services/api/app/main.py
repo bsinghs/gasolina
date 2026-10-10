@@ -26,6 +26,8 @@ from app.modules.summaries.router import router as summaries_router
 from app.modules.books.router import router as books_router
 from app.modules.vendors.router import router as vendors_router
 from app.modules.inventory.router import router as inventory_router
+from app.modules.monitor import log as request_log
+from app.modules.monitor.router import router as monitor_router
 
 
 @asynccontextmanager
@@ -34,6 +36,7 @@ async def lifespan(_: FastAPI):
     bootstrap_owner()
     bootstrap_admins()
     record_release()
+    request_log.remove_old()
     yield
     db.close_pool()
 
@@ -48,8 +51,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],
 )
+request_log.install(app)   # one row per request for the admin Monitor page
 
-for router in [me_router, stores_router, people_router, reports_router, exports_router, settings_router, admin_router, summaries_router, books_router, vendors_router, inventory_router]:
+for router in [me_router, stores_router, people_router, reports_router, exports_router, settings_router, admin_router, summaries_router, books_router, vendors_router, inventory_router, monitor_router]:
     app.include_router(router, prefix="/api")
 
 

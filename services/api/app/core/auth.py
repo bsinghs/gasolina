@@ -155,8 +155,11 @@ def current_user(
     x_view_as: str | None = Header(default=None),
 ) -> CurrentUser:
     user = _signed_in_user(authorization, x_dev_email)
+    request.state.person_id = user.id          # for the request log (app/modules/monitor)
     if x_view_as:
-        return _view_as(user, x_view_as, request.method)
+        viewed = _view_as(user, x_view_as, request.method)
+        request.state.viewed_as = viewed.id
+        return viewed
     # The one gate for "view only": a role without make_changes can read but never save (see permissions.py).
     # The screens don't show change buttons to these people; this is the safety net behind them.
     if not user.can_change and request.method.upper() not in READ_ONLY_METHODS:
@@ -167,6 +170,13 @@ def current_user(
 def owner_only(user: CurrentUser = Depends(current_user)) -> CurrentUser:
     if not user.is_owner:
         raise HTTPException(status_code=403, detail="Only the owner can do this")
+    return user
+
+
+def admin_only(user: CurrentUser = Depends(current_user)) -> CurrentUser:
+    """The app admin themself (not the owner, and not while using View as)."""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Only the app admin can see this")
     return user
 
 

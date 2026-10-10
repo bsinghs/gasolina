@@ -322,3 +322,28 @@ export interface VendorSpending {
   vendors: { vendor: string; on_list: boolean; cost_of_goods: string; expense: string; not_on_list: string; total: string; share: string;
              items: { date: string; what: string; amount: string; source: "typed" | "paid_out" }[] }[];
 }
+
+// ---------- Admin Monitor (app admin only, docs/features/admin-monitor.md) ----------
+export type MonitorPeriod = "release" | "today" | "7d" | "30d";
+export type HistoryKind = "worksheet" | "vendor" | "books" | "person" | "store" | "settings";
+export interface OnlinePerson {
+  person_id: string; name: string; role: Role; page: string | null; device: string | null; last_at: string; viewing_as: string | null;
+}
+export interface MonitorLive { online: OnlinePerson[]; per_minute: { minute: string; requests: number; errors: number }[]; online_minutes: number }
+export interface UsagePerson {
+  person_id: string; name: string; role: Role; visits: number; active_minutes: number; requests: number; errors: number;
+  first_seen: string; last_seen: string; device: string | null; screens: string[];
+}
+export interface MonitorUsage {
+  period: MonitorPeriod; label: string; since: string;
+  totals: { requests: number; people: number; errors: number; slow: number };
+  people: UsagePerson[];
+  days: { day: string; people: number; requests: number; errors: number }[];
+  problems: { at: string; name: string | null; method: string; route: string; page: string | null; status: number; ms: number }[];
+  slowest: { method: string; route: string; requests: number; avg_ms: number; max_ms: number }[];
+}
+export interface HistoryRow {
+  id: number; at: string; action: string; details: Record<string, unknown>; report_id: string | null;
+  who: string | null; role: Role | null; business_date: string | null; store: string | null;
+}
+export interface MonitorHistory { rows: HistoryRow[]; next_before: number | null; people: { id: string; name: string; role: Role }[] }

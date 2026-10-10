@@ -56,7 +56,7 @@ services/api/app/
 │   ├── errors.py      not_found(), forbidden(), ...
 │   ├── dates.py       business_today(): "today" in the stores' time zone (servers run in UTC)
 │   ├── release.py     running version (VERSION file + GIT_COMMIT) and the release log (releases table)
-│   ├── audit.py       one history-log line for owner actions (books, vendors)
+│   ├── audit.py       one history-log line for owner actions (books, vendors, people, stores, settings)
 │   └── json.py        exact(): money out as strings, never floats
 └── modules/
     ├── me/            who am I, which stores can I use
@@ -76,6 +76,7 @@ services/api/app/
     │   └── math.py            P&L and balance-sheet math (pure, tested)
     ├── inventory/     fuel tanks + merchandise per store (read-only; owner home page)
     │   └── math.py            on hand, % full, used, days left, pump check, bought vs sold (pure, tested)
+    ├── monitor/       app admin's Monitor: request log (log.py, one row per API request), who's online, usage, history
     └── admin/         test-only reset; View-as lives in core/auth.py
 ```
 
