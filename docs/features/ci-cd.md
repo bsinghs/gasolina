@@ -1,6 +1,6 @@
 # Feature spec: automatic tests, release tags and API deploys (GitHub Actions)
 
-_Status: **built Oct 9** · Bhajan, Oct 9: automate the git and deploy steps. $0 (GitHub Actions free tier, Cloud Build free minutes)_
+_Status: **live Oct 9** · Bhajan, Oct 9: automate the git and deploy steps. $0 (GitHub Actions free tier, Cloud Build free minutes)_
 
 ## Problem
 Tagging releases and deploying the API were manual steps on two machines (laptop for tags, Cloud Shell for `deploy.sh`). Easy to forget, easy to get out of order (screens on a new version, API on an old one).
@@ -41,4 +41,4 @@ One-time setup (Bhajan, Cloud Shell, ~5 minutes): `bash deploy/cloudrun/setup-gi
 - [x] First green runs on GitHub (Oct 9: CI on `test` and `main`); `main` run tagged `v2026.10.4` by itself.
 - [x] Setup script run + repository variables set (Bhajan, Oct 9).
 - [x] First automatic test deploy (Oct 9, commit ba4eedb, health check green).
-- [ ] First production deploy by button.
+- [x] First production deploy by button (Oct 9, 11:34 PM, d9347ec): screens and API both 2026.10.4; release log row recorded.

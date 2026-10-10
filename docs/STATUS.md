@@ -58,7 +58,7 @@ Long-term direction: [ROADMAP.md](ROADMAP.md): replace QuickBooks (~$30/month pe
 
 ## Wishlist: quality and training (agreed Oct 4, do later)
 
-1. ~~Automatic checks on every push~~: done Oct 9 (GitHub Actions: tests + web build, test API auto-deploy, release tags, Deploy production button). Spec: [features/ci-cd.md](features/ci-cd.md)
+1. ~~Automatic checks on every push~~: done Oct 9 (GitHub Actions: tests + web build, test API auto-deploy, release tags, Deploy production button). Spec: [features/ci-cd.md](features/ci-cd.md). Live: keyless sign-in set up, first automatic test deploy and first production deploy by button (2026.10.4, Oct 9)
 2. **Click tests with Playwright**: employee submits on a phone, owner sends back, fix, approve, export. Runs on every push. $0
 3. **Error alerts** (e.g. Sentry free plan): email when the app errors on someone's phone. $0 tier
 4. ~~Test copy of the app~~: done Oct 5 (finish setup steps above)
