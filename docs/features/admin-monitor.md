@@ -50,7 +50,7 @@ $0: one small row per request in the existing Supabase database (≈ a few MB pe
 - [x] Usage since last release / today / 7 / 30 days: visits, active minutes, requests, top screens, errors.
 - [x] History shows all kinds incl. people, stores, settings changes, with filters and paging.
 - [x] Rows older than 90 days removed on start.
-- [x] Tests (`tests/test_monitor.py`, 11), `npm run build`, click-through locally as employee (phone), co-owner, owner, admin (desktop + phone); docs (STATUS, ARCHITECTURE, CHANGELOG 2026.10.5).
+- [x] Tests (`tests/test_monitor.py`, 12), `npm run build`, click-through locally as employee (phone), co-owner, owner, admin (desktop + phone); docs (STATUS, ARCHITECTURE, CHANGELOG 2026.10.5).
 - [ ] On the test site after the automatic deploy; then production (Deploy production button).
 
 ## Stories

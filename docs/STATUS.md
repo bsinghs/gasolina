@@ -49,7 +49,7 @@ Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.
 Long-term direction: [ROADMAP.md](ROADMAP.md): replace QuickBooks (~$30/month per store) step by step, with the accountant's OK.
 
 ## Latest (Oct 10): admin Monitor (2026.10.5)
-App admin only: **Monitor** page with who's online now (incl. screen and phone/computer), requests per minute for the last hour, usage since the last release / today / 7 / 30 days (visits, active minutes, screens, errors, slowest requests) and the full history of what people did, now including people, store and settings changes. One request-log row per API request (migration 010, kept 90 days; no ids, values or IP). Spec: [features/admin-monitor.md](features/admin-monitor.md). 106 API tests.
+App admin only: **Monitor** page with who's online now (incl. screen and phone/computer), requests per minute for the last hour, usage since the last release / today / 7 / 30 days (visits, active minutes, screens, errors, slowest requests) and the full history of what people did, now including people, store and settings changes. One request-log row per API request (migration 010, kept 90 days; no ids, values or IP). Spec: [features/admin-monitor.md](features/admin-monitor.md). 107 API tests.
 
 ## After the demo (in order)
 

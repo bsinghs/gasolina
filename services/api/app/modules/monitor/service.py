@@ -159,8 +159,8 @@ def history(conn: Connection, person_id: UUID | None, kind: str | None, before: 
         params["person"] = person_id
     if kind:
         where.append(HISTORY_KINDS[kind])
-    if before:
-        where.append("a.id < %(before)s")
+    if before:  # "Show more": rows older than the last one shown (time first, id breaks ties)
+        where.append("(a.at, a.id) < (select b.at, b.id from audit_log b where b.id = %(before)s)")
         params["before"] = before
     rows = db.fetch_all(
         conn,
@@ -171,7 +171,7 @@ def history(conn: Connection, person_id: UUID | None, kind: str | None, before: 
             left join daily_reports d on d.id = a.report_id
             left join stores s on s.id = d.store_id
             where {' and '.join(where)}
-            order by a.id desc limit %(limit)s""",
+            order by a.at desc, a.id desc limit %(limit)s""",
         params,
     )
     more = len(rows) > limit

@@ -186,7 +186,20 @@ def test_history_covers_people_stores_settings_with_filters_and_paging(client):
     page1 = c.get("/api/monitor/history?limit=3", headers=ADMIN).json()
     page2 = c.get(f"/api/monitor/history?limit=3&before={page1['next_before']}", headers=ADMIN).json()
     assert len(page1["rows"]) == 3 and page1["next_before"]
-    assert page2["rows"][0]["id"] < page1["rows"][-1]["id"]
+    assert page2["rows"][0]["at"] <= page1["rows"][-1]["at"]
+    assert not {r["id"] for r in page1["rows"]} & {r["id"] for r in page2["rows"]}
+
+
+def test_history_is_newest_first_by_time_even_if_written_out_of_order(client):
+    import psycopg
+    owner_id = rows("select id from people where email = 'owner@example.com'")[0]["id"]
+    with psycopg.connect(TEST_DB) as conn:   # back-dated row written last (like imported or sample data)
+        conn.execute("""insert into audit_log (actor_id, action, details, at)
+                        values (%s, 'vendor.added', '{"name": "Old one", "kind": "expense"}', now() - interval '400 days')""", [owner_id])
+    h = client.get("/api/monitor/history?limit=200", headers=ADMIN).json()["rows"]
+    times = [r["at"] for r in h]
+    assert times == sorted(times, reverse=True)
+    assert h[-1]["details"]["name"] == "Old one"
 
 
 def test_worksheet_history_shows_store_and_day(client):
