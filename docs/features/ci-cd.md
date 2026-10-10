@@ -33,11 +33,12 @@ The deploy account can only: build images (Cloud Build), store them (Artifact Re
 One-time setup (Bhajan, Cloud Shell, ~5 minutes): `bash deploy/cloudrun/setup-github-deploy.sh`, then add the two values it prints as **repository variables** in GitHub (Settings → Secrets and variables → Actions → Variables): `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA`. Until they're set, the test auto-deploy is skipped (tests and tags still run).
 
 ## CI mode of deploy.sh
-`CI=true` (set by the workflow): no confirmation question (the button is the confirmation), and only the build + start + health-check steps. `DEPLOYED_BY` = `github-actions (<GitHub user>)` in the release log.
+`CI=true` (set by the workflow): no confirmation question (the button is the confirmation), and only the build + start + health-check steps. `DEPLOYED_BY` = `github-actions (<GitHub user>)` in the release log. `PROJECT_NUMBER` is taken from `GCP_WIF_PROVIDER` (the deploy account isn't allowed to read project details). If a step fails, the failing line shows as an error note on the run.
 
 ## Acceptance
 - [x] Workflows: tests + web build on every push; tag on main; test deploy on test; production deploy button (YAML checked).
 - [x] `deploy.sh` CI mode; setup script for keyless sign-in; `make release` no longer tags by hand.
 - [x] First green runs on GitHub (Oct 9: CI on `test` and `main`); `main` run tagged `v2026.10.4` by itself.
 - [x] Setup script run + repository variables set (Bhajan, Oct 9).
-- [ ] First automatic test deploy; first production deploy by button.
+- [x] First automatic test deploy (Oct 9, commit ba4eedb, health check green).
+- [ ] First production deploy by button.
