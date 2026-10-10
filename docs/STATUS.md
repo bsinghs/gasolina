@@ -19,6 +19,8 @@ _Last updated: Oct 9, 2026_
 
 | Owner's call, Oct 8 (Oct 9) | **My days** for staff: fuel + merchandise per day, month totals, "Show 30 more days", submit time (also on Review). **Co-owner** role: sees every owner page, **view only** (no change buttons; API refuses changes). Permissions are one table (API `core/permissions.py` = web `lib/access.ts`). **Inventory** = owner / co-owner home: per tank on hand, % full, delivered, used, days left, "Order soon", pump vs tank check, price vs cost per gallon; merchandise bought vs sold; fuel deliveries typed in become fuel purchases on the P&L. **Vendor dropdown** on paid outs (searchable; Miscellaneous + note; checked on submit) and a "to sort out" list for the owner. Add-only migration 008. Spec: [features/owner-call-oct9.md](features/owner-call-oct9.md) (Future: Erie Bank feed, Reed Oil / ABL invoices) | 93 API tests (9 inventory math unit, 4 permissions unit, 11 API, 8 from independent review: 4 bugs found and fixed); browser click-through owner / co-owner / employee, laptop + phone |
 
+| Versions & releases (Oct 9) | `VERSION` (2026.10.3) + `CHANGELOG.md` + git tags per release; version and commit on `/api/health` and at the bottom of every page (amber if screens and API differ); release log (`releases` table, migration 009) in Settings; `make release`. Spec: [features/releases-and-versions.md](features/releases-and-versions.md) | 95 API tests (release log: one row per new version/commit, restarts don't add rows) |
+
 ## Next: get it live (you)
 
 Follow [DEPLOY.md](DEPLOY.md). About 30–45 minutes.

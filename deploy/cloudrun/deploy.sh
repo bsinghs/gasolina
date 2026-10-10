@@ -40,6 +40,12 @@ esac
 
 step() { printf '\n\033[1;34m==> [%s] %s\033[0m\n' "$TARGET" "$*"; }
 cd "$(git rev-parse --show-toplevel)"
+VERSION=$(cat VERSION)
+COMMIT=$(git rev-parse --short HEAD)
+printf '\nDeploying version \033[1m%s\033[0m (commit %s, branch %s)\n' "$VERSION" "$COMMIT" "$(git rev-parse --abbrev-ref HEAD)"
+if [[ "$TARGET" == "production" ]] && ! git tag --points-at HEAD | grep -qx "v${VERSION}"; then
+  printf '\033[1;33mNote: this commit has no release tag v%s yet (made by "make release"). Did you pull main?\033[0m\n' "$VERSION"
+fi
 if [[ "$TARGET" == "production" ]]; then
   printf '\n\033[1;31mYou are deploying the REAL app (production). Did you try this on test first?\033[0m\n'
   read -rp "Type 'production' to continue: " CONFIRM
@@ -91,7 +97,7 @@ gcloud artifacts repositories set-cleanup-policies "$REPO" --location="$REGION" 
 echo "Done."
 
 step "5/8 Building the API (~2-3 minutes)"
-IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/api:$(git rev-parse --short HEAD)"
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/api:${VERSION}-${COMMIT}"
 gcloud builds submit --config=deploy/cloudrun/cloudbuild.yaml --substitutions=_IMAGE="$IMAGE" \
   --service-account="projects/${PROJECT}/serviceAccounts/${RUNTIME_SA}" .
 
@@ -104,6 +110,8 @@ AUTH_MODE: "supabase"
 SUPABASE_URL: "${SUPABASE_URL}"
 ADMIN_EMAILS: "${ADMIN_EMAILS}"
 CORS_ORIGINS: "${CORS_ORIGINS}"
+GIT_COMMIT: "${COMMIT}"
+DEPLOYED_BY: "$(gcloud config get-value account 2>/dev/null)"
 ENVEOF
 gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" \
   --allow-unauthenticated \
@@ -137,5 +145,5 @@ fi
 step "Checking it works"
 sleep 3
 curl -fsS "${URL}/api/health" && echo
-printf '\n\033[1;32m[%s] API is live at: %s\033[0m\n' "$TARGET" "$URL"
+printf '\n\033[1;32m[%s] API version %s (%s) is live at: %s\033[0m\n' "$TARGET" "$VERSION" "$COMMIT" "$URL"
 echo "Copy that address back to Claude."

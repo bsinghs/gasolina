@@ -338,3 +338,7 @@ table.my-days td.left .stamp { white-space: normal; }
 @media (max-width: 480px) {
   table.my-days td, table.my-days th { padding: 9px 7px; font-size: 13px; }
 }
+
+/* Version line at the bottom of every page */
+.version-footer { text-align: center; font-size: 11px; color: var(--ink-soft); opacity: .75; padding: 18px 12px 26px; }
+.version-footer.mismatch { color: var(--amber-deep); opacity: 1; }

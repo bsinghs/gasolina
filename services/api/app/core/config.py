@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # owner power, are listed separately on the People page, and the owner can't change them.
     admin_emails: str = ""
 
+    # Release info: set by deploy/cloudrun/deploy.sh (VERSION comes from the VERSION file in the image)
+    git_commit: str = "dev"
+    deployed_by: str = ""
+
     # The stores' time zone: decides what "today" is (servers run in UTC)
     business_timezone: str = "America/New_York"
 

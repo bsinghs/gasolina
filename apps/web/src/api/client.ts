@@ -3,7 +3,7 @@
 import type {
   AppSettings, JournalLine, Me, Person, Report, ReportSummary, Store, WorksheetInput,
   Period, PeriodSummary, Vendor, VendorKind, LedgerEntry, EntryInput, ProfitAndLoss, PnlYear, BalanceSheet,
-  BalanceLineInput, VendorSpending, History, Inventory, TankSpec, VendorName, MiscPaidOut,
+  BalanceLineInput, VendorSpending, History, Inventory, TankSpec, Health, Release, VendorName, MiscPaidOut,
 } from "./types";
 
 /** Tanks / tank_specs left out = keep the store's tanks as they are */
@@ -86,6 +86,8 @@ function query(params: Record<string, string | boolean | undefined>) {
 
 export const api = {
   me: () => request<Me>("/me"),
+  health: () => request<Health>("/health"),
+  releases: () => request<Release[]>("/releases"),
 
   admin: {
     resetTestData: () => request<{ ok: boolean; removed: Record<string, number> }>("/admin/reset-test-data", { method: "POST" }),

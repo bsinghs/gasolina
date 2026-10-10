@@ -14,6 +14,7 @@ services/api/          Python 3.12 FastAPI. All business rules, auth checks, dat
 database/migrations/   numbered plain SQL (001_, 002_ ...). Applied in order on every API start
 deploy/cloudrun/       Google Cloud Run deploy (run deploy.sh in Cloud Shell)
 docs/                  STATUS.md (done/next), ARCHITECTURE.md, DEPLOY.md, features/ (one spec per feature)
+VERSION, CHANGELOG.md  release version (year.month.n) and plain-language release notes
 render.yaml            old Render host (being retired)
 Makefile               make demo · make live · make test · make stop · make reset-demo
 ```
@@ -27,6 +28,7 @@ Makefile               make demo · make live · make test · make stop · make 
 | API tests | `make test` (needs Python 3.10+). Workflow tests also need `TEST_DATABASE_URL` |
 | Type-check + build the web app | `cd apps/web && npm run build` |
 | Deploy the API | Cloud Shell: `cd ~/gasolina && git pull && bash deploy/cloudrun/deploy.sh test` (then `production`) |
+| Release to production | Bump `VERSION` + add a `CHANGELOG.md` entry on `test`, then `make release` (tests, merge to main, tag `v<version>`), then `deploy.sh production`. See docs/DEPLOY.md "Releasing" |
 
 ## Two copies of the app: test first, then production
 
@@ -38,7 +40,7 @@ Makefile               make demo · make live · make test · make stop · make 
 | Look | Orange TEST banner, `[TEST]` tab title | Normal |
 | Extras | Admin **Reset test data** (Settings) | None: real data can't be wiped from the app |
 
-Flow: commit to `test` → push → try it on the test site (and `deploy.sh test` if the API changed) → merge `test` into `main` → push → `deploy.sh production`.
+Flow: commit to `test` → push → try it on the test site (and `deploy.sh test` if the API changed) → bump `VERSION` + `CHANGELOG.md` → `make release` (merges into `main`, tags) → `deploy.sh production`. Versions show at the bottom of every page; Settings → Versions & releases has the release log.
 `APP_ENV` (API) and `VITE_APP_ENV` (web) say which copy is running; web settings per copy are in `apps/web/.env.production`, `.env.test`, `.env.demo`.
 
 ## Rules (don't break these)

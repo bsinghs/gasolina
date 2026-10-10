@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { hasOwnerAccess, ROLE_NAMES, type Role } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
+import { VersionFooter } from "./VersionFooter";
 
 const ROLE_LABEL: Record<string, string> = { owner: "Owners", coowner: "Co-owners", manager: "Managers", employee: "Employees" };
 
@@ -65,6 +66,7 @@ export function Layout() {
         </div>
       </header>
       <Outlet />
+      <VersionFooter />
     </>
   );
 }

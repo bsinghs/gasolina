@@ -86,6 +86,18 @@ On Render's free plan the API goes to sleep after 15 minutes without traffic, an
 5. As owner: Review → open the day → Approve → Export → Download QuickBooks CSV.
 6. In QuickBooks Online: ⚙ → Import data → Journal entries. Turn off account numbers first.
 
+## Releasing
+
+Every production release has a **version** (`VERSION`, e.g. `2026.10.3` = year.month.release-in-month), a **changelog entry** (`CHANGELOG.md`, plain words) and a **git tag** (`v2026.10.3`). Spec: [features/releases-and-versions.md](features/releases-and-versions.md).
+
+1. On `test`: build and commit the change. Bump `VERSION` and add `## <version> (<date>)` to the top of `CHANGELOG.md` (same commit).
+2. Push `test`; try it on the test site (`deploy.sh test` in Cloud Shell if the API changed).
+3. `make release` (on your laptop, from `test`): checks the version has a changelog entry and isn't released yet, runs the tests, fast-forwards `main`, tags `v<version>`, pushes. The screens publish from `main`.
+4. Cloud Shell: `cd ~/gasolina && git checkout main && git pull && bash deploy/cloudrun/deploy.sh production`. It prints the version and warns if the commit has no release tag.
+5. Check: the bottom of any page shows `Shift Close <version> · screens … · API <version>` (amber if the two differ). Settings → **Versions & releases** shows the release log: the API writes a row each time it starts with a new version or commit (each copy keeps its own log).
+
+Roll back: `git checkout v<previous>` in Cloud Shell and run `deploy.sh production` (the API), and redeploy that commit's screens from Cloudflare Pages → Deployments.
+
 ## Troubleshooting
 
 | You see | Fix |

@@ -6,13 +6,14 @@
 #   make stop       stop the demo database and API
 #   make reset-demo wipe the demo database and start fresh next time
 #   make test       run the API tests (needs Python 3.10+)
+#   make release    release test -> production screens: checks VERSION + CHANGELOG, tests, merge to main, tag
 #
 # Needs: Node 20+, and Docker Desktop (for `make demo`).
 
 PYTHON ?= python3
 VENV    = services/api/.venv
 
-.PHONY: help demo live check-node check-docker stop reset-demo test
+.PHONY: help demo live check-node check-docker stop reset-demo test release
 
 help:
 	@sed -n '2,10p' Makefile | sed 's/^# \{0,1\}//'
@@ -67,3 +68,7 @@ test:
 	@$(PYTHON) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || (echo "make test needs Python 3.10+ (this Mac has $$($(PYTHON) --version)). Install from https://www.python.org/downloads/ or run: make test PYTHON=python3.12" && exit 1)
 	@test -x $(VENV)/bin/python && $(VENV)/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || (rm -rf $(VENV) && cd services/api && $(PYTHON) -m venv .venv)
 	@cd services/api && .venv/bin/pip install -q -r requirements-dev.txt && .venv/bin/python -m pytest -q
+
+# ---------- release: test -> main, tag v<VERSION> (see docs/DEPLOY.md "Releasing") ----------
+release:
+	@bash deploy/release.sh

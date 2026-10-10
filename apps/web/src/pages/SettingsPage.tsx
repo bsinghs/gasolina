@@ -2,11 +2,13 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import { GRADES, type AppSettings, type Grade, type QbAccounts, type Store, type TankSpec } from "../api/types";
+import { GRADES, type Health, type Release, type AppSettings, type Grade, type QbAccounts, type Store, type TankSpec } from "../api/types";
 import { useAuth } from "../auth/AuthProvider";
 import { IS_TEST } from "../lib/env";
 import { Notice } from "../components/Notice";
 import { useViewOnly } from "../lib/access";
+import { SCREENS_COMMIT, SCREENS_VERSION } from "../components/VersionFooter";
+import { prettyTime } from "../lib/dates";
 
 const ACCOUNT_LABELS: Record<keyof QbAccounts, string> = {
   cash: "Cash drop goes to",
@@ -30,6 +32,13 @@ export function SettingsPage() {
   const [taxPct, setTaxPct] = useState("6");
   const [newStore, setNewStore] = useState({ name: "", qb_location: "" });
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+
+  const [health, setHealth] = useState<Health | null>(null);
+  const [releases, setReleases] = useState<Release[]>([]);
+  useEffect(() => {
+    api.health().then(setHealth).catch(() => setHealth(null));
+    api.releases().then(setReleases).catch(() => setReleases([]));
+  }, []);
 
   const load = () => Promise.all([api.stores.list(), api.settings.get()]).then(([s, st]) => { setStores(s); setSettings(st); setTaxPct(String(+(parseFloat(st.sales_tax_rate) * 100).toFixed(2))); });
   useEffect(() => { load().catch((e) => setMessage({ kind: "error", text: e.message })); }, []);
@@ -176,6 +185,28 @@ export function SettingsPage() {
           {!viewOnly && <div className="card-pad"><button className="btn btn-primary" type="submit">Save settings</button></div>}
         </form>
       )}
+      <section className="card">
+        <div className="card-head">Versions &amp; releases</div>
+        <div className="card-body stack" style={{ paddingTop: 12 }}>
+          <div className="field-row"><span>Screens (this website)</span><span>{SCREENS_VERSION} · {SCREENS_COMMIT}</span></div>
+          <div className="field-row"><span>API ({health?.env ?? "…"})</span><span>{health ? `${health.version} · ${health.commit}` : "…"}</span></div>
+          <p className="muted" style={{ margin: 0 }}>
+            Each time this copy's API starts with a new version, it's recorded below. What changed in each version is in CHANGELOG.md.
+          </p>
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th className="left">When</th><th className="left">Copy</th><th className="left">Version</th><th className="left">Commit</th><th className="left">By</th></tr></thead>
+              <tbody>
+                {releases.map((r, i) => (
+                  <tr key={i}><td className="left">{prettyTime(r.started_at)}</td><td className="left">{r.env}</td><td className="left">{r.version}</td>
+                    <td className="left">{r.git_commit}</td><td className="left">{r.deployed_by ?? "–"}</td></tr>
+                ))}
+                {releases.length === 0 && <tr><td colSpan={5} className="left muted">No releases recorded yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }

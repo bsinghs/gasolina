@@ -6,6 +6,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY services/api/ ./services/api/
 COPY database/ ./database/
+COPY VERSION ./VERSION
 
 WORKDIR /srv/services/api
 ENV PORT=8000

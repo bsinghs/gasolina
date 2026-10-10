@@ -55,6 +55,7 @@ services/api/app/
 │   ├── permissions.py who may do what: one table per role (same table in web lib/access.ts)
 │   ├── errors.py      not_found(), forbidden(), ...
 │   ├── dates.py       business_today(): "today" in the stores' time zone (servers run in UTC)
+│   ├── release.py     running version (VERSION file + GIT_COMMIT) and the release log (releases table)
 │   ├── audit.py       one history-log line for owner actions (books, vendors)
 │   └── json.py        exact(): money out as strings, never floats
 └── modules/

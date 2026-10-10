@@ -286,6 +286,10 @@ export interface StoreInventory {
 export interface Inventory { month: string; label: string; reorder_percent: number; as_of: string; stores: StoreInventory[] }
 
 export interface VendorName { name: string; kind: VendorKind }
+
+// ---------- Versions ----------
+export interface Health { ok: boolean; env: string; version: string; commit: string }
+export interface Release { env: string; version: string; git_commit: string; deployed_by: string | null; started_at: string }
 export interface MiscPaidOut {
   id: string; amount: string; kind: PaidOutKind; note: string | null; report_id: string; business_date: string;
   status: Status; store_name: string; submitted_by_name: string | null;
